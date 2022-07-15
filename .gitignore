@@ -1,5 +1,6 @@
 *.txt
 *.csv
+*.npz
 *.npy
 
 preprocessing/TRAIN
@@ -12,7 +13,7 @@ prediction/train_preprocessing
 prediction/model
 prediction/metadata
 prediction/data
-
+prediction/custom_model
 
 
 ## R
