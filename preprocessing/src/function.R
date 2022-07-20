@@ -1,3 +1,6 @@
+library(tidyverse)
+library(Prep4DeepDEP)
+
 # CCLE omics integration venn diagram
 venn_diagram <- function(inter_list, type = ""){
   p_v <- ggVennDiagram::ggVennDiagram(x = inter_list) +
