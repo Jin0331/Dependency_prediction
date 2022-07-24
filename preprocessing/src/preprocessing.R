@@ -13,13 +13,10 @@ ccle_preprocessing()
 # TCGA index RData load
 load("RData/TCGA-PANCAN-EXPRESSION_index.RData")
 load("RData/TCGA-PANCAN-EXPRESSION.RData")
-
 load("RData/TCGA-PANCAN_MUTATION_index.RData")
 load("RData/TCGA-PANCAN_MUTATION.RData")
-
 load("RData/TCGA-PANCAN_CNA_index.RData")
 load("RData/TCGA-PANCAN_CNA.RData")
-
 load("RData/TCGA-PANCAN_METHYLATION_index.RData")
 load("RData/TCGA-PANCAN_METHYLATION.RData")
 
