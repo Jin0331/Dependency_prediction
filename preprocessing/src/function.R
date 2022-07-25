@@ -357,7 +357,9 @@ ccle_preprocessing <- function(path = "/home/wmbio/WORK/gitworking/DeepDEP/prepr
                                CCLE_MUT_PATH = "/home/wmbio/WORK/gitworking/DeepDEP/preprocessing/RAW/CCLs/CCLE_mutations.csv",
                                CCLE_METH_PATH = "/home/wmbio/WORK/gitworking/DeepDEP/preprocessing/RAW/CCLs/CCLs_methylation_GSE68379.Rds",
                                CCLE_CNA_PATH = "/home/wmbio/WORK/gitworking/DeepDEP/preprocessing/RAW/CCLs/CCLE_segment_cn.csv",
-                               CCLE_GD_PATH = "/home/wmbio/WORK/gitworking/DeepDEP/preprocessing/RAW/CCLs/CRISPR_gene_effect.csv"){
+                               CCLE_GD_PATH = "/home/wmbio/WORK/gitworking/DeepDEP/preprocessing/RAW/CCLs/CRISPR_gene_effect.csv",
+                               DepOI_defualt = "/home/wmbio/WORK/gitworking/DeepDEP/preprocessing/RData/PAPER/default_dep_genes_1298.RData",
+                               DepOI_SD = NULL){
   setwd(path)
   
   sample_info <-  data.table::fread(CCLE_SAMPLE_INFO) %>% 
@@ -529,7 +531,19 @@ ccle_preprocessing <- function(path = "/home/wmbio/WORK/gitworking/DeepDEP/prepr
   ccle_mut_com <- ccle_mut %>% select(Gene, any_of(ccle_omics_intersection))
   ccle_cna_com <- ccle_cna %>% filter(CCLE_name %in% ccle_omics_intersection)
   ccle_meth_com <- ccle_meth %>% select(Probe, any_of(ccle_omics_intersection))
-  ccle_gene_dependency_com <- ccle_gene_dependency %>% select(Gene, any_of(ccle_omics_intersection))
+  
+  # DepOIs
+  if(is.null(DepOI_SD)){
+    load(DepOI_defualt)
+  } else {
+    dep.data <- apply(ccle_gene_dependency, MARGIN = 1, sd, na.rm = TRUE) %>% 
+      tibble(Gene = ccle_gene_dependency$Gene, SD = .) %>% 
+      filter(SD >= DepOI_SD) %>% 
+      select(Gene)
+  }
+  ccle_gene_dependency_com <- ccle_gene_dependency %>% 
+    inner_join(x = ., y = dep.data, by = "Gene") %>% 
+    select(Gene, any_of(ccle_omics_intersection))
   
   # Save train dataset
   save(ccle_exp_com, file = "RData/CCLE-COSMIC-EXPRESSION.RData")
@@ -786,7 +800,7 @@ Prep4DeepDEP_custom <- function (exp.data = NULL, mut.data = NULL, meth.data = N
             stop(c("Cell line names are inconsistent!"), call. = FALSE)
         }
         cat("Gene dependency scores (training mode) start...", "\n")
-        crispr.input <- dep.data[which(dep.data$Gene %in% list.genes$Gene), 
+        crispr.input <- dep.data[which(dep.data$Gene %in% list.genes$Gene),  # list.genes
                                  which(colnames(dep.data) %in% c("Gene", check.cellNames))]
         k = 2:ncol(crispr.input)
         crispr.output <- pbmcapply::pbmclapply(X = k, FUN = function(index){
