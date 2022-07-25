@@ -36,7 +36,7 @@ col_gene_row_cell <- function(DF, col_name = TRUE){
 }
 
 # preprocessing
-tcga_preprocessing <- function(save_path = "/home/wmbio/WORK/gitworking/DeepDEP/preprocessing/",){
+tcga_preprocessing <- function(save_path){
   setwd(save_path)
   
   # raw data load
@@ -112,7 +112,7 @@ tcga_preprocessing <- function(save_path = "/home/wmbio/WORK/gitworking/DeepDEP/
       ggtitle("TCGA-Omics integration") +
       scale_fill_gradient(low = "#F4FAFE", high = "#4981BF") +
       theme(legend.position = "none")
-    ggsave(p_tcga, filename = pasteo(save_path, "/TCGA-Omics_integration.png"), dpi = 200, width = 20, height = 10)
+    ggsave(p_tcga, filename = paste0(save_path, "/TCGA-Omics_integration.png"), dpi = 200, width = 20, height = 10)
     tcga_omics_sample %>% tibble(Tumor_Sample_Barcode = .) %>% 
       write_delim(file = paste0(save_path, "/TCGA_OMICS_INTER_SAMPLE_BARCODE.txt"), delim = '\t')
     
@@ -226,7 +226,7 @@ tcga_preprocessing <- function(save_path = "/home/wmbio/WORK/gitworking/DeepDEP/
     colnames(tcga_cna)[col_idx] <- "Chromosome"
   }
   
-  dir.create("RData/TCGA-PANCAN-CNV", showWarnings = FALSE)
+  dir.create(paste0(save_path, "/TCGA-PANCAN-CNV"), showWarnings = FALSE)
   cnv_list <- list.files('RData/TCGA-PANCAN-CNV', full.names = T)
   if(length(cnv_list) >= 22){
     bigTable_list <- list()
@@ -377,6 +377,7 @@ ccle_preprocessing <- function(save_path = "/home/wmbio/WORK/gitworking/DeepDEP/
     colnames() %>% 
     .[-1] %>% 
     tibble(DepMap_ID = .)
+  
   ccle_exp_col_name_com <- left_join(x = ccle_exp_col_name, y = sample_info, by = "DepMap_ID") %>% 
     pull(stripped_cell_line_name)
   colnames(ccle_exp) <- c("Gene", ccle_exp_col_name_com)
@@ -553,6 +554,147 @@ ccle_preprocessing <- function(save_path = "/home/wmbio/WORK/gitworking/DeepDEP/
   save(ccle_gene_dependency_com, file = paste0(save_path, "/CCLE-COSMIC-GENEDEPENDENCY.RData"))
   
 }
+
+# prediction
+ccls_omics_extraction <- function(ccls,
+                                  CCLE_SAMPLE_INFO = "/home/wmbio/WORK/gitworking/DeepDEP/preprocessing/RAW/CCLs/sample_info.csv",
+                                  CCLE_EXP_PATH = "/home/wmbio/WORK/gitworking/DeepDEP/preprocessing/RAW/CCLs/CCLE_expression.csv",
+                                  CCLE_MUT_PATH = "/home/wmbio/WORK/gitworking/DeepDEP/preprocessing/RAW/CCLs/CCLE_mutations.csv",
+                                  CCLE_METH_PATH = "/home/wmbio/WORK/gitworking/DeepDEP/preprocessing/RAW/CCLs/CCLs_methylation_GSE68379.Rds",
+                                  CCLE_CNA_PATH = "/home/wmbio/WORK/gitworking/DeepDEP/preprocessing/RAW/CCLs/CCLE_segment_cn.csv"){
+  
+  # sample information
+  sample_info <-  data.table::fread(CCLE_SAMPLE_INFO) %>% 
+    as_tibble() %>% 
+    select(DepMap_ID, stripped_cell_line_name, COSMICID) %>%
+    # filter(!is.na(COSMICID)) %>% 
+    arrange(DepMap_ID)
+  
+  # gene expression
+  ccle_exp <- data.table::fread(CCLE_EXP_PATH) %>% 
+    as_tibble() %>% 
+    col_gene_row_cell() %>% 
+    distinct(GENE, .keep_all = TRUE) %>% 
+    as_tibble()
+  
+  ccle_exp_col_name  <- ccle_exp %>% 
+    colnames() %>% 
+    .[-1] %>% 
+    tibble(DepMap_ID = .)
+  
+  ccle_exp_col_name_com <- left_join(x = ccle_exp_col_name, y = sample_info, by = "DepMap_ID") %>% 
+    pull(stripped_cell_line_name)
+  colnames(ccle_exp) <- c("Gene", ccle_exp_col_name_com)
+  
+  ## mut - nonsense, missense, frameshit IS, DEL, splice
+  mutation_type <- c('Nonsense_Mutation', 'Missense_Mutation', 'Frame_Shift_Del', 'Frame_Shift_Ins','Splice_Site' )
+  mut <- data.table::fread(file = CCLE_MUT_PATH) %>% 
+    as_tibble() %>% 
+    select(DepMap_ID, everything()) %>% 
+    filter(Variant_Classification %in% mutation_type) %>% 
+    group_by(DepMap_ID, Hugo_Symbol) %>% 
+    summarise(cnt = n()) %>% 
+    mutate(cnt = 1)
+  
+  ccls <- mut %>% 
+    pull(DepMap_ID) %>% 
+    unique()
+  
+  ccle_mut <- lapply(X = ccls, FUN = function(id){
+    longtowide <- mut %>% 
+      filter(DepMap_ID == id) %>%
+      pivot_wider(names_from = "DepMap_ID", values_from = "cnt")
+  }) %>% 
+    purrr::reduce(.x = ., full_join, by = "Hugo_Symbol") %>% 
+    replace(is.na(.), 0) %>% 
+    as_tibble()
+  
+  ccle_mut_col_name <- ccle_mut %>% 
+    colnames() %>% 
+    .[-1] %>% 
+    tibble(DepMap_ID = .)
+  ccle_mut_col_name_com <- left_join(x = ccle_mut_col_name, y = sample_info, by = "DepMap_ID") %>% 
+    pull(stripped_cell_line_name)
+  colnames(ccle_mut) <- c("Gene", ccle_mut_col_name_com)
+  
+  # CNA
+  ccle_cna <- data.table::fread(file = CCLE_CNA_PATH) %>% 
+    as_tibble() %>% 
+    select(-Status, -Source) %>% 
+    select(CCLE_name = DepMap_ID, Chromosome, Start, End, Num_Probes, Segment_Mean) %>% 
+    left_join(x = ., y = sample_info, by = c("CCLE_name" = "DepMap_ID")) %>% 
+    select(-CCLE_name) %>%
+    select(CCLE_name = stripped_cell_line_name, everything()) %>% 
+    filter(!is.na(CCLE_name)) %>% 
+    as_tibble()
+  
+  # Methylation
+  if(!file.exists(CCLE_METH_PATH)){
+    #get raw data - idats, processed beta matrix, etc.
+    getGEOSuppFiles("GSE68379")
+    
+    #list files
+    idatFiles <- list.files("RAW/CCLs/CCLs_methylation_GSE68379", pattern = "idat.gz$", full = TRUE)
+    
+    #decompress individual idat files
+    sapply(idatFiles, gunzip, overwrite = TRUE)
+    
+    #read idats and create RGSet
+    RGSet <- read.metharray.exp("RAW/CCLs//CCLs_methylation_GSE68379")
+    saveRDS(RGSet, "RAW/CCLs/CCLs_methylation_GSE68379.Rds")
+  } else {
+    RGSet <- readRDS(CCLE_METH_PATH)
+  }
+  
+  # phenotype
+  geoMat <- getGEO("GSE68379")
+  pD.all <- pData(geoMat[[1]])
+  col_name <- pD.all$characteristics_ch1.3
+  
+  # get methylation beta
+  grSet <- preprocessQuantile(RGSet)
+  grBeta <- getBeta(grSet) %>% 
+    as.data.frame()
+  colnames(grBeta) <- col_name
+  grBeta_NULL <- which(colnames(grBeta) == "", arr.ind = TRUE)
+  ccle_meth <- grBeta[, -grBeta_NULL] %>% 
+    rownames_to_column(var = "Probe")
+  
+  # methylation
+  ccle_meth_col_name <- ccle_meth %>% 
+    colnames() %>% 
+    lapply(X = ., FUN = function(value){
+      str_split(string = value, pattern = " ") %>% 
+        unlist() %>% .[2] %>% 
+        return()
+    }) %>% unlist() %>% 
+    tibble(COSMICID = .) %>% 
+    mutate(COSMICID = as.integer(COSMICID)) %>%  .[-1, ]
+  
+  ccle_meth_col_name_com <- left_join(x = ccle_meth_col_name, y = sample_info, by = "COSMICID") %>%
+    distinct(COSMICID, .keep_all = TRUE) %>% 
+    pull(stripped_cell_line_name)
+  colnames(ccle_meth) <- c("Probe", ccle_meth_col_name_com)
+  
+  # COSMIC ID exist
+  ccle_meth_cosmic <- which(!is.na(colnames(ccle_meth)), arr.ind = TRUE)
+  ccle_meth <- ccle_meth %>% select_at(ccle_meth_cosmic) %>% 
+    distinct(Probe, .keep_all = TRUE) %>% 
+    as_tibble()
+  
+  
+  
+  
+}
+
+ccls_wmbio <- read_delim("https://s3.us-west-2.amazonaws.com/secure.notion-static.com/0ccd993c-0f2c-4529-925f-40669970c4ed/WMBIO_UNIQUE_CELL_LINE.txt?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=AKIAT73L2G45EIPT3X45%2F20220725%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20220725T064945Z&X-Amz-Expires=86400&X-Amz-Signature=cebc944049e5556bf73499e22309d9065fbbd73e61dddda244eb6e8447413be1&X-Amz-SignedHeaders=host&response-content-disposition=filename%20%3D%22WMBIO_UNIQUE_CELL_LINE.txt%22&x-id=GetObject",
+                         delim = "\t", col_names = F) %>% 
+  pull(1)
+
+
+
+
+
 
 # CCLE omics integration venn diagram
 venn_diagram <- function(inter_list, type = ""){

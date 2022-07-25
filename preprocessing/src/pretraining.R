@@ -10,7 +10,7 @@ dir.create(save_path, showWarnings = FALSE, recursive = TRUE)
 tcga_preprocessing()
 
 # DeepDEP input source CCLE ----
-ccle_preprocessing()
+ccle_preprocessing(save_path = save_path)
 
 
 # Final, CCLE-TCGA intersection ----
@@ -25,10 +25,10 @@ load("RData/TCGA-PANCAN_METHYLATION_index.RData")
 load("RData/TCGA-PANCAN_METHYLATION.RData")
 
 # CCLE-COSMIC RData load
-load("RData/CCLE-COSMIC-EXPRESSION.RData")
-load("RData/CCLE-COSMIC-MUTATION.RData")
-load("RData/CCLE-COSMIC-CNA.RData")
-load("RData/CCLE-COSMIC-METHYLATION.RData")
+load(paste0(save_path, "/CCLE-COSMIC-EXPRESSION.RData"))
+load(paste0(save_path, "/CCLE-COSMIC-MUTATION.RData"))
+load(paste0(save_path, "/CCLE-COSMIC-CNA.RData"))
+load(paste0(save_path, "/CCLE-COSMIC-METHYLATION.RData"))
 
 #
 gene_expression_gene <- list(CCLE_EXP = ccle_exp_com$Gene, TCGA_EXP = tcga_exp_index$Gene)
