@@ -1,9 +1,13 @@
 source('src/function.R')
 
+path <- "/home/wmbio/WORK/gitworking/DeepDEP/preprocessing/TRAIN"
+now_date <- Sys.time() %>% str_split(" ") %>% unlist() %>% .[1]
+save_path <- paste0(path, "/", now_date)
+
+dir.create(save_path, showWarnings = FALSE, recursive = TRUE)
 
 # TCGA PANCAN for pretrain ####
 tcga_preprocessing()
-
 
 # DeepDEP input source CCLE ----
 ccle_preprocessing()

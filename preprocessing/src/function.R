@@ -36,8 +36,8 @@ col_gene_row_cell <- function(DF, col_name = TRUE){
 }
 
 # preprocessing
-tcga_preprocessing <- function(path = "/home/wmbio/WORK/gitworking/DeepDEP/preprocessing/"){
-  setwd(path)
+tcga_preprocessing <- function(save_path = "/home/wmbio/WORK/gitworking/DeepDEP/preprocessing/",){
+  setwd(save_path)
   
   # raw data load
   {
@@ -69,7 +69,7 @@ tcga_preprocessing <- function(path = "/home/wmbio/WORK/gitworking/DeepDEP/prepr
   }
   
   # omics sample extraction
-  if(!file.exists("RAW/PANCANCER/TCGA_OMICS_INTER_SAMPLE_BARCODE.txt")){
+  if(!file.exists(paste0(save_path, "/TCGA_OMICS_INTER_SAMPLE_BARCODE.txt"))){
     tcga_primary_sample <- read_delim(file = "RAW/PANCANCER/TCGA_phenotype_denseDataOnlyDownload.tsv",
                                       delim = "\t", show_col_types = FALSE) %>% 
       filter(sample_type == "Primary Tumor") %>% 
@@ -112,12 +112,12 @@ tcga_preprocessing <- function(path = "/home/wmbio/WORK/gitworking/DeepDEP/prepr
       ggtitle("TCGA-Omics integration") +
       scale_fill_gradient(low = "#F4FAFE", high = "#4981BF") +
       theme(legend.position = "none")
-    ggsave(p_tcga, filename = "RAW/PANCANCER/TCGA-Omics_integration.png", dpi = 200, width = 20, height = 10)
+    ggsave(p_tcga, filename = pasteo(save_path, "/TCGA-Omics_integration.png"), dpi = 200, width = 20, height = 10)
     tcga_omics_sample %>% tibble(Tumor_Sample_Barcode = .) %>% 
-      write_delim(file = "RAW/PANCANCER/TCGA_OMICS_INTER_SAMPLE_BARCODE.txt", delim = '\t')
+      write_delim(file = paste0(save_path, "/TCGA_OMICS_INTER_SAMPLE_BARCODE.txt"), delim = '\t')
     
   } else {
-    tcga_omics_sample <- read_delim(file = "RAW/PANCANCER/TCGA_OMICS_INTER_SAMPLE_BARCODE.txt", 
+    tcga_omics_sample <- read_delim(file = paste0(save_path, "/TCGA_OMICS_INTER_SAMPLE_BARCODE.txt"), 
                                     delim = "\t", show_col_types = FALSE) %>% pull(1)
   }
   
@@ -154,8 +154,8 @@ tcga_preprocessing <- function(path = "/home/wmbio/WORK/gitworking/DeepDEP/prepr
     dplyr::select(Gene, Mean = exp_mean) %>%
     arrange(Gene)
   
-  save(tcga_exp_convert, file = "RData/TCGA-PANCAN-EXPRESSION.RData")
-  save(tcga_exp_index, file = "RData/TCGA-PANCAN-EXPRESSION_index.RData")
+  save(tcga_exp_convert, file = paste0(save_path, "/TCGA-PANCAN-EXPRESSION.RData"))
+  save(tcga_exp_index, file = paste0("/TCGA-PANCAN-EXPRESSION_index.RData"))
   
   ## mut
   tcga_mut <- tcga_mut_raw %>% 
@@ -187,9 +187,9 @@ tcga_preprocessing <- function(path = "/home/wmbio/WORK/gitworking/DeepDEP/prepr
     filter(MUT_FREQ >= 0.01) %>% 
     select(Gene = Hugo_Symbol, Median = MUT_MEDIAN)
   
-  save(mut_longtowide, file = "RData/TCGA-PANCAN_MUTATION.RData")
+  save(mut_longtowide, file = paste0(save_path, "/TCGA-PANCAN_MUTATION.RData"))
   # load("RData/TCGA-PANCAN_MUTATION.RData")
-  save(tcga_mut_index, file = "RData/TCGA-PANCAN_MUTATION_index.RData")
+  save(tcga_mut_index, file = paste0(save_path, "/TCGA-PANCAN_MUTATION_index.RData"))
   
   
   # Methylation
@@ -209,8 +209,8 @@ tcga_preprocessing <- function(path = "/home/wmbio/WORK/gitworking/DeepDEP/prepr
     filter(METH_FREQ < 0.9) %>% 
     select(Probe, Mean)
   
-  save(tcga_meth_convert, file = "RData/TCGA-PANCAN_METHYLATION.RData")
-  save(tcga_meth_index, file = "RData/TCGA-PANCAN_METHYLATION_index.RData")
+  save(tcga_meth_convert, file = paste0(save_path,"/TCGA-PANCAN_METHYLATION.RData"))
+  save(tcga_meth_index, file = paste0(save_path, "/TCGA-PANCAN_METHYLATION_index.RData"))
   
   
   # CNA
@@ -303,7 +303,7 @@ tcga_preprocessing <- function(path = "/home/wmbio/WORK/gitworking/DeepDEP/prepr
       }, mc.cores = 24)
       
       # join
-      save(sample_bigTable, file = paste0('RData/TCGA-PANCAN-CNV/chr', chr_, ".RData"))
+      save(sample_bigTable, file = paste0(save_path, '/TCGA-PANCAN-CNV/chr', chr_, ".RData"))
       
       print("sample bigTable join...")
       bigTable_list[[chr_]] <- sample_bigTable %>% 
@@ -347,11 +347,11 @@ tcga_preprocessing <- function(path = "/home/wmbio/WORK/gitworking/DeepDEP/prepr
     separate(col = Start_END, into = c("Start", "End"), sep = "to") %>% 
     mutate(Chr = as.numeric(str_remove_all(Chr, "chr")), Start = as.numeric(Start), End = as.numeric(End))
   
-  save(tcga_cna_convert, file = "RData/TCGA-PANCAN_CNA.RData")
-  save(tcga_cna_index, file = "RData/TCGA-PANCAN_CNA_index.RData")
+  save(tcga_cna_convert, file = paste0(save_path, "/TCGA-PANCAN_CNA.RData"))
+  save(tcga_cna_index, file = paste0(save_path, "/TCGA-PANCAN_CNA_index.RData"))
   
 }
-ccle_preprocessing <- function(path = "/home/wmbio/WORK/gitworking/DeepDEP/preprocessing/", 
+ccle_preprocessing <- function(save_path = "/home/wmbio/WORK/gitworking/DeepDEP/preprocessing/", 
                                CCLE_SAMPLE_INFO = "/home/wmbio/WORK/gitworking/DeepDEP/preprocessing/RAW/CCLs/sample_info.csv",
                                CCLE_EXP_PATH = "/home/wmbio/WORK/gitworking/DeepDEP/preprocessing/RAW/CCLs/CCLE_expression.csv",
                                CCLE_MUT_PATH = "/home/wmbio/WORK/gitworking/DeepDEP/preprocessing/RAW/CCLs/CCLE_mutations.csv",
@@ -525,7 +525,7 @@ ccle_preprocessing <- function(path = "/home/wmbio/WORK/gitworking/DeepDEP/prepr
     ggtitle("CCLE-Omics integration") + 
     scale_fill_gradient(low = "#F4FAFE", high = "#4981BF") +
     theme(legend.position = "none")
-  ggsave(p_v, filename = "RData/CCLE-Omics_integration.png", dpi = 200, width = 20, height = 10)
+  ggsave(p_v, filename = paste0(save_path, "/CCLE-Omics_integration.png"), dpi = 200, width = 20, height = 10)
   
   ccle_exp_com <- ccle_exp %>% select(Gene, any_of(ccle_omics_intersection))
   ccle_mut_com <- ccle_mut %>% select(Gene, any_of(ccle_omics_intersection))
@@ -546,11 +546,11 @@ ccle_preprocessing <- function(path = "/home/wmbio/WORK/gitworking/DeepDEP/prepr
     select(Gene, any_of(ccle_omics_intersection))
   
   # Save train dataset
-  save(ccle_exp_com, file = "RData/CCLE-COSMIC-EXPRESSION.RData")
-  save(ccle_mut_com, file = "RData/CCLE-COSMIC-MUTATION.RData")
-  save(ccle_cna_com, file = "RData/CCLE-COSMIC-CNA.RData")
-  save(ccle_meth_com, file = "RData/CCLE-COSMIC-METHYLATION.RData")
-  save(ccle_gene_dependency_com, file = "RData/CCLE-COSMIC-GENEDEPENDENCY.RData")
+  save(ccle_exp_com, file = paste0(save_path,"/CCLE-COSMIC-EXPRESSION.RData"))
+  save(ccle_mut_com, file = paste0(save_path, "/CCLE-COSMIC-MUTATION.RData"))
+  save(ccle_cna_com, file = paste0(save_path, "/CCLE-COSMIC-CNA.RData"))
+  save(ccle_meth_com, file = paste0(save_path, "/CCLE-COSMIC-METHYLATION.RData"))
+  save(ccle_gene_dependency_com, file = paste0(save_path, "/CCLE-COSMIC-GENEDEPENDENCY.RData"))
   
 }
 
@@ -560,7 +560,7 @@ venn_diagram <- function(inter_list, type = ""){
     ggtitle("CCLE-TCGA omics integration") + 
     scale_fill_gradient(low = "#F4FAFE", high = "#4981BF") +
     theme(legend.position = "none")
-  ggsave(p_v, filename = paste0("CCLE-TCGA_integration_", type, ".png"), dpi = 200, width = 20, height = 10)
+  ggsave(p_v, filename = paste0(save_path, "/CCLE-TCGA_integration_", type, ".png"), dpi = 200, width = 20, height = 10)
   return(p_v)
 }
 
