@@ -36,7 +36,7 @@ col_gene_row_cell <- function(DF, col_name = TRUE){
 }
 
 # preprocessing
-tcga_preprocessing <- function(save_path){
+tcga_preprocessing <- function(save_path = "."){
   setwd(save_path)
   
   # raw data load
@@ -351,7 +351,7 @@ tcga_preprocessing <- function(save_path){
   save(tcga_cna_index, file = paste0(save_path, "/TCGA-PANCAN_CNA_index.RData"))
   
 }
-ccle_preprocessing <- function(save_path = "/home/wmbio/WORK/gitworking/DeepDEP/preprocessing/", 
+ccle_preprocessing <- function(save_path = ".", 
                                CCLE_SAMPLE_INFO = "/home/wmbio/WORK/gitworking/DeepDEP/preprocessing/RAW/CCLs/sample_info.csv",
                                CCLE_EXP_PATH = "/home/wmbio/WORK/gitworking/DeepDEP/preprocessing/RAW/CCLs/CCLE_expression.csv",
                                CCLE_MUT_PATH = "/home/wmbio/WORK/gitworking/DeepDEP/preprocessing/RAW/CCLs/CCLE_mutations.csv",
@@ -556,12 +556,12 @@ ccle_preprocessing <- function(save_path = "/home/wmbio/WORK/gitworking/DeepDEP/
 }
 
 # prediction
-ccls_omics_extraction <- function(ccls,
-                                  CCLE_SAMPLE_INFO = "/home/wmbio/WORK/gitworking/DeepDEP/preprocessing/RAW/CCLs/sample_info.csv",
+ccle_omics_extraction <- function(ccls, CCCLE_SAMPLE_INFO = "/home/wmbio/WORK/gitworking/DeepDEP/preprocessing/RAW/CCLs/sample_info.csv",
                                   CCLE_EXP_PATH = "/home/wmbio/WORK/gitworking/DeepDEP/preprocessing/RAW/CCLs/CCLE_expression.csv",
                                   CCLE_MUT_PATH = "/home/wmbio/WORK/gitworking/DeepDEP/preprocessing/RAW/CCLs/CCLE_mutations.csv",
                                   CCLE_METH_PATH = "/home/wmbio/WORK/gitworking/DeepDEP/preprocessing/RAW/CCLs/CCLs_methylation_GSE68379.Rds",
-                                  CCLE_CNA_PATH = "/home/wmbio/WORK/gitworking/DeepDEP/preprocessing/RAW/CCLs/CCLE_segment_cn.csv"){
+                                  CCLE_CNA_PATH = "/home/wmbio/WORK/gitworking/DeepDEP/preprocessing/RAW/CCLs/CCLE_segment_cn.csv",
+                                  save_path = "."){
   
   # sample information
   sample_info <-  data.table::fread(CCLE_SAMPLE_INFO) %>% 
@@ -682,24 +682,49 @@ ccls_omics_extraction <- function(ccls,
     distinct(Probe, .keep_all = TRUE) %>% 
     as_tibble()
   
+  # intersection check
+  omics_col_name <- list(exp = ccle_exp %>% select(any_of(ccls_wmbio)) %>% colnames(),
+                         mut = ccle_mut %>% select(any_of(ccls_wmbio)) %>% colnames(),
+                         cna = ccle_cna %>% filter(CCLE_name %in% ccls_wmbio) %>% .$CCLE_name %>% unique(),
+                         meth = ccle_meth %>% select(any_of(ccls_wmbio)) %>% colnames())
   
+  # omics intersect
+  v <- venn_diagram(inter_list = omics_col_name)
+  intersect_target <- v$layers[[1]]$data$item
+  names(intersect_target) <- v$layers[[1]]$data$name
   
+  tmp <- intersect_target[['exp..mut']]
   
+  ccle_meth %>% select(Probe, any_of(tmp))
+  ccle_cna %>% filter(CCLE_name %in% tmp)
+  
+  lapply(X = names(intersect_target), FUN = function(value){
+    target_list <- intersect_target[[value]]
+    
+    if(length(target_list) <= 0)
+      return(NULL)
+    
+    exp.data <- ccle_exp %>% select(Gene, any_of(target_list))
+    mut.data <- ccle_mut %>% select(Gene, any_of(target_list))
+    meth.data <- ccle_meth %>% select(Probe, any_of(target_list))
+    cna.data <- ccle_cna %>% filter(CCLE_name %in% target_list)
+    
+    if(ncol(exp.data) > 1)
+      write_delim(x = exp.data, file = paste0(save_path, "/prediction_exp_", value, ".txt"), delim = "\t")
+    if(ncol(mut.data) > 1)
+      write_delim(x = mut.data, file = paste0(save_path, "/prediction_mut_", value, ".txt"), delim = "\t")
+    if(ncol(meth.data) > 1)
+      write_delim(x = meth.data, file = paste0(save_path, "/prediction_meth_", value, ".txt"), delim = "\t")
+    if(nrow(cna.data) >= 1)
+      write_delim(x = cna.data, file = paste0(save_path, "/prediction_cna_", value, ".txt"), delim = "\t")
+    
+  })
 }
 
-ccls_wmbio <- read_delim("https://s3.us-west-2.amazonaws.com/secure.notion-static.com/0ccd993c-0f2c-4529-925f-40669970c4ed/WMBIO_UNIQUE_CELL_LINE.txt?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=AKIAT73L2G45EIPT3X45%2F20220725%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20220725T064945Z&X-Amz-Expires=86400&X-Amz-Signature=cebc944049e5556bf73499e22309d9065fbbd73e61dddda244eb6e8447413be1&X-Amz-SignedHeaders=host&response-content-disposition=filename%20%3D%22WMBIO_UNIQUE_CELL_LINE.txt%22&x-id=GetObject",
-                         delim = "\t", col_names = F) %>% 
-  pull(1)
-
-
-
-
-
-
 # CCLE omics integration venn diagram
-venn_diagram <- function(inter_list, type = ""){
+venn_diagram <- function(inter_list, save_path = ".", type = "", ggtitle_text = ""){
   p_v <- ggVennDiagram::ggVennDiagram(x = inter_list) +
-    ggtitle("CCLE-TCGA omics integration") + 
+    ggtitle(ggtitle_text) + 
     scale_fill_gradient(low = "#F4FAFE", high = "#4981BF") +
     theme(legend.position = "none")
   ggsave(p_v, filename = paste0(save_path, "/CCLE-TCGA_integration_", type, ".png"), dpi = 200, width = 20, height = 10)
