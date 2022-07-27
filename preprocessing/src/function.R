@@ -66,6 +66,17 @@ tcga_preprocessing <- function(save_path = "."){
     tcga_meth_raw <- data.table::fread(file = "RAW/PANCANCER/jhu-usc.edu_PANCAN_merged_HumanMethylation27_HumanMethylation450.betaValue_whitelisted.tsv") %>% 
       as_tibble() %>% 
       dplyr::rename(Probe = `Composite Element REF`)
+    
+    tcga_meth_sample <- tcga_meth_raw %>% colnames() %>% .[-1] %>% 
+      lapply(X = ., FUN = function(s){
+        tmp <- s %>% str_split(pattern = "-") %>% unlist() %>% 
+          .[1:4] %>% 
+          paste0(collapse = "-") %>% 
+          substring(., 1, nchar(.) - 1)
+        return(tmp)
+      }) %>% unlist() %>% unique()
+    colnames(tcga_meth_raw) <- c("Probe", tcga_meth_sample)
+    
   }
   
   # omics sample extraction
@@ -91,19 +102,12 @@ tcga_preprocessing <- function(save_path = "."){
       unique() 
     
     # methlation
-    tcga_meth_sample <- tcga_meth_raw %>% colnames() %>% .[-1] %>% 
-      lapply(X = ., FUN = function(s){
-        tmp <- s %>% str_split(pattern = "-") %>% unlist() %>% 
-          .[1:4] %>% 
-          paste0(collapse = "-") %>% 
-          substring(., 1, nchar(.) - 1)
-        return(tmp)
-      }) %>% unlist() %>% unique()
-    colnames(tcga_meth_raw) <- c("Probe", tcga_meth_sample)
+    tcga_meth_sample <- tcga_meth_raw %>% 
+      colnames() %>% unique()
     
-    tcga_omics_sample <- intersect.Vector(tcga_exp_sample, tcga_mut_sample) %>% 
-      intersect.Vector(., tcga_cna_sample) %>% 
-      intersect.Vector(., tcga_meth_sample)
+    tcga_omics_sample <- intersect(tcga_exp_sample, tcga_mut_sample) %>% 
+      intersect(., tcga_cna_sample) %>% 
+      intersect(., tcga_meth_sample)
     
     p_tcga <- ggVennDiagram::ggVennDiagram(x = list(Exp = tcga_exp_sample,
                                                     Mutation = tcga_mut_sample,
@@ -155,7 +159,9 @@ tcga_preprocessing <- function(save_path = "."){
     arrange(Gene)
   
   save(tcga_exp_convert, file = paste0(save_path, "/TCGA-PANCAN-EXPRESSION.RData"))
-  save(tcga_exp_index, file = paste0("/TCGA-PANCAN-EXPRESSION_index.RData"))
+  save(tcga_exp_index, file = paste0(save_path, "/TCGA-PANCAN-EXPRESSION_index.RData"))
+  
+  rm(tcga_exp_raw, tcga_exp, tcga_exp_convert);gc()
   
   ## mut
   tcga_mut <- tcga_mut_raw %>% 
@@ -191,6 +197,8 @@ tcga_preprocessing <- function(save_path = "."){
   # load("RData/TCGA-PANCAN_MUTATION.RData")
   save(tcga_mut_index, file = paste0(save_path, "/TCGA-PANCAN_MUTATION_index.RData"))
   
+  rm(tcga_mut_raw, tcga_mut, mut_longtowide, tcga_mut_convert);gc()
+  
   
   # Methylation
   tcga_meth_convert <- tcga_meth_raw %>% 
@@ -212,6 +220,7 @@ tcga_preprocessing <- function(save_path = "."){
   save(tcga_meth_convert, file = paste0(save_path,"/TCGA-PANCAN_METHYLATION.RData"))
   save(tcga_meth_index, file = paste0(save_path, "/TCGA-PANCAN_METHYLATION_index.RData"))
   
+  rm(tcga_meth_raw, tcga_meth_convert);gc()
   
   # CNA
   tcga_cna <- tcga_cna_raw %>% 

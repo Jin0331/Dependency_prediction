@@ -1,17 +1,16 @@
 source('src/function.R')
 
-path <- "/home/wmbio/WORK/gitworking/DeepDEP/preprocessing/TRAIN"
+path <- "/home/wmbio/WORK/gitworking/Dependency_prediction/preprocessing/TRAIN"
 now_date <- Sys.time() %>% str_split(" ") %>% unlist() %>% .[1]
 save_path <- paste0(path, "/", now_date)
 
-dir.create(save_path, showWarnings = FALSE, recursive = TRUE)
+dir.create(save_path, showWarnings = TRUE, recursive = TRUE)
 
 # TCGA PANCAN for pretrain ####
-tcga_preprocessing()
+tcga_preprocessing(save_path = save_path)
 
 # DeepDEP input source CCLE ----
 ccle_preprocessing(save_path = save_path)
-
 
 # Final, CCLE-TCGA intersection ----
 # TCGA index RData load
