@@ -4,7 +4,7 @@ path <- "/home/wmbio/WORK/gitworking/Dependency_prediction/preprocessing/TRAIN"
 now_date <- Sys.time() %>% str_split(" ") %>% unlist() %>% .[1]
 save_path <- paste0(path, "/", now_date)
 
-dir.create(save_path, showWarnings = TRUE, recursive = TRUE)
+dir.create(save_path, showWarnings = FALSE, recursive = TRUE)
 
 # TCGA PANCAN for pretrain ####
 tcga_preprocessing(save_path = save_path)
@@ -14,14 +14,14 @@ ccle_preprocessing(save_path = save_path)
 
 # Final, CCLE-TCGA intersection ----
 # TCGA index RData load
-load("RData/TCGA-PANCAN-EXPRESSION_index.RData")
-load("RData/TCGA-PANCAN-EXPRESSION.RData")
-load("RData/TCGA-PANCAN_MUTATION_index.RData")
-load("RData/TCGA-PANCAN_MUTATION.RData")
-load("RData/TCGA-PANCAN_CNA_index.RData")
-load("RData/TCGA-PANCAN_CNA.RData")
-load("RData/TCGA-PANCAN_METHYLATION_index.RData")
-load("RData/TCGA-PANCAN_METHYLATION.RData")
+load(paste0(save_path, "/TCGA-PANCAN-EXPRESSION_index.RData"))
+load(paste0(save_path, "/TCGA-PANCAN-EXPRESSION.RData"))
+load(paste0(save_path, "/TCGA-PANCAN_MUTATION_index.RData"))
+load(paste0(save_path, "/TCGA-PANCAN_MUTATION.RData"))
+load(paste0(save_path, "/TCGA-PANCAN_CNA_index.RData"))
+load(paste0(save_path, "/TCGA-PANCAN_CNA.RData"))
+load(paste0(save_path, "/TCGA-PANCAN_METHYLATION_index.RData"))
+load(paste0(save_path, "/TCGA-PANCAN_METHYLATION.RData"))
 
 # CCLE-COSMIC RData load
 load(paste0(save_path, "/CCLE-COSMIC-EXPRESSION.RData"))

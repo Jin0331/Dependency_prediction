@@ -37,7 +37,7 @@ col_gene_row_cell <- function(DF, col_name = TRUE){
 
 # preprocessing
 tcga_preprocessing <- function(save_path = "."){
-  setwd(save_path)
+  # setwd(save_path)
   
   # raw data load
   {
@@ -236,7 +236,7 @@ tcga_preprocessing <- function(save_path = "."){
   }
   
   dir.create(paste0(save_path, "/TCGA-PANCAN-CNV"), showWarnings = FALSE)
-  cnv_list <- list.files('RData/TCGA-PANCAN-CNV', full.names = T)
+  cnv_list <- list.files(paste0(save_path, '/TCGA-PANCAN-CNV'), full.names = T)
   if(length(cnv_list) >= 22){
     bigTable_list <- list()
     for(index in 1:length(cnv_list)){
@@ -349,7 +349,7 @@ tcga_preprocessing <- function(save_path = "."){
     bind_cols(., bigTable_com_zeros, cv, absmean) %>% 
     filter(CNA_ZEROS_FREQ <= 0.05 & CV > 0.2 & ABS_MEAN > 0.15)
   
-  tcga_cna_index <-  tcga_cnv_index %>% 
+  tcga_cna_index <-  tcga_cna_index %>% 
     select(CNA) %>% 
     separate(col = CNA, into = c("Chr", "Start_END", "REMOVE1"), sep = "_", remove = FALSE) %>% 
     select(-REMOVE1) %>% 
@@ -361,13 +361,13 @@ tcga_preprocessing <- function(save_path = "."){
   
 }
 ccle_preprocessing <- function(save_path = ".", 
-                               CCLE_SAMPLE_INFO = "/home/wmbio/WORK/gitworking/DeepDEP/preprocessing/RAW/CCLs/sample_info.csv",
-                               CCLE_EXP_PATH = "/home/wmbio/WORK/gitworking/DeepDEP/preprocessing/RAW/CCLs/CCLE_expression.csv",
-                               CCLE_MUT_PATH = "/home/wmbio/WORK/gitworking/DeepDEP/preprocessing/RAW/CCLs/CCLE_mutations.csv",
-                               CCLE_METH_PATH = "/home/wmbio/WORK/gitworking/DeepDEP/preprocessing/RAW/CCLs/CCLs_methylation_GSE68379.Rds",
-                               CCLE_CNA_PATH = "/home/wmbio/WORK/gitworking/DeepDEP/preprocessing/RAW/CCLs/CCLE_segment_cn.csv",
-                               CCLE_GD_PATH = "/home/wmbio/WORK/gitworking/DeepDEP/preprocessing/RAW/CCLs/CRISPR_gene_effect.csv",
-                               DepOI_defualt = "/home/wmbio/WORK/gitworking/DeepDEP/preprocessing/RData/PAPER/default_dep_genes_1298.RData",
+                               CCLE_SAMPLE_INFO = "/home/wmbio/WORK/gitworking/Dependency_prediction/preprocessing/RAW/CCLs/sample_info.csv",
+                               CCLE_EXP_PATH = "/home/wmbio/WORK/gitworking/Dependency_prediction/preprocessing/RAW/CCLs/CCLE_expression.csv",
+                               CCLE_MUT_PATH = "/home/wmbio/WORK/gitworking/Dependency_prediction/preprocessing/RAW/CCLs/CCLE_mutations.csv",
+                               CCLE_METH_PATH = "/home/wmbio/WORK/gitworking/Dependency_prediction/preprocessing/RAW/CCLs/CCLs_methylation_GSE68379.Rds",
+                               CCLE_CNA_PATH = "/home/wmbio/WORK/gitworking/Dependency_prediction/preprocessing/RAW/CCLs/CCLE_segment_cn.csv",
+                               CCLE_GD_PATH = "/home/wmbio/WORK/gitworking/Dependency_prediction/preprocessing/RAW/CCLs/CRISPR_gene_effect.csv",
+                               DepOI_defualt = "/home/wmbio/WORK/gitworking/Dependency_prediction/preprocessing/PAPER/default_dep_genes_1298.RData",
                                DepOI_SD = NULL){
   setwd(path)
   
@@ -813,7 +813,7 @@ Prep4DeepDEP_custom <- function (exp.data = NULL, mut.data = NULL, meth.data = N
                                row.names = FALSE, col.names = TRUE, quote = FALSE)
         }
         if (tolower(mode) == "training") {
-          k = 2:ncol(outputData.final.exp)
+          k = 2:5 # k = 2:ncol(outputData.final.exp)
           rep_col_list <- pbmcapply::pbmclapply(X = k, FUN = function(index){
             rep_col.1 <- do.call("cbind", replicate(n, outputData.final.exp[, index], simplify = FALSE)) # 
             colnames(rep_col.1) <- paste0("C", index-1, "G", seq(1, n, 1))
