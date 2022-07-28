@@ -823,6 +823,7 @@ Prep4DeepDEP_custom <- function (exp.data = NULL, mut.data = NULL, meth.data = N
           data.table::fwrite(rep_col, file = paste(filename.out, "exp_training.txt", sep = "_"), 
                       sep = "\t", row.names = FALSE, col.names = TRUE, quote = FALSE)
         }
+        rm(exp.data, inputData, outputData, outputData.final.exp, rep_col_list, rep_col);gc()
         cat("Exp completed!", "\n\n")
     }
     # Mutation
@@ -878,7 +879,8 @@ Prep4DeepDEP_custom <- function (exp.data = NULL, mut.data = NULL, meth.data = N
         data.table::fwrite(rep_col, 
                            file = paste(filename.out, "mut_training.txt", sep = "_"), 
                            sep = "\t", row.names = FALSE, col.names = TRUE, quote = FALSE)
-        }
+      }
+      rm(mut.data, inputData, outputData, outputData.final.mut, rep_col_list, rep_col);gc()
       cat("Mut completed!", "\n\n")
     }
     # Methylation
@@ -940,6 +942,7 @@ Prep4DeepDEP_custom <- function (exp.data = NULL, mut.data = NULL, meth.data = N
                              file = paste(filename.out, "meth_training.txt", sep = "_"), 
                              sep = "\t", row.names = FALSE, col.names = TRUE, quote = FALSE)
         }
+        rm(meth.data, inputData, outputData, outputData.final.meth, rep_col_list, rep_col);gc()
         cat("Meth completed!", "\n\n")
     }
     # Gene dependency
@@ -947,6 +950,7 @@ Prep4DeepDEP_custom <- function (exp.data = NULL, mut.data = NULL, meth.data = N
         stop("dep.data format error, please check!", call. = FALSE)
     } else {
         cat(c("Fingerprint started..."), "\n")
+        ncell <- ncol(dep.data  [, -1])
         colnames(dep.data)[1] <- "Gene"
         idx <- which(fingerprint[1, ] %in% c("GeneSet", list.genes$Gene))
         outputData <- fingerprint[, idx]
@@ -956,6 +960,7 @@ Prep4DeepDEP_custom <- function (exp.data = NULL, mut.data = NULL, meth.data = N
                                sep = "\t", row.names = FALSE, col.names = FALSE, quote = FALSE)
         }
         if (tolower(mode) == "training") {
+            
             outputData.train <- cbind(outputData[, 1], 
                                       do.call("cbind", replicate(ncell, outputData[, -1], simplify = FALSE)))
             outputData.train[1, ] <- c("GeneSet", paste0(paste0("C", rep(seq(1, ncell, 1), each = n)), "G", seq(1, n, 1)))
@@ -964,6 +969,7 @@ Prep4DeepDEP_custom <- function (exp.data = NULL, mut.data = NULL, meth.data = N
                                sep = "\t", row.names = FALSE, col.names = FALSE, quote = FALSE)
             
         }
+        rm(outputData.train);gc()
         cat("Fingerprint completed!", "\n\n")
     }
     if (!is.null(dep.data) & tolower(mode) == "training") {
@@ -987,7 +993,7 @@ Prep4DeepDEP_custom <- function (exp.data = NULL, mut.data = NULL, meth.data = N
         data.table::fwrite(crispr.output, 
                            file = paste(filename.out, "DepScore_training.txt", sep = "_"), 
                            sep = "\t", row.names = FALSE, col.names = TRUE, quote = FALSE)
-        
+        rm(crispr.output);gc()
         cat("Gene dependency scores (training) completed!", "\n\n")
     }
     if (!is.null(cna.data)) {
@@ -1029,13 +1035,14 @@ Prep4DeepDEP_custom <- function (exp.data = NULL, mut.data = NULL, meth.data = N
                              file = paste(filename.out, "cna_training.txt", sep = "_"), 
                              sep = "\t", row.names = FALSE, col.names = TRUE, quote = FALSE)
         }
+        rm(outputData.cna, rep_col, rep_col_list, cna.data);gc()
         cat("CNA completed!", "\n\n")
     }
 }
 
-.PrepCNA_custom <- function (cna.original, filenames, filtered_table_path = "TCGA_INDEX/CUSTOM/cna_table_5915.RData", exportTable = FALSE) {
+.PrepCNA_custom <- function (cna.original, filenames, exportTable = FALSE) {
   library(progress)
-  BP_SIZE <- 10 ^ 5
+  BP_SIZE <- 10 ^ 4
   cellLine <- unique(cna.original$CCLE_name)
   
   # chr type change
@@ -1050,7 +1057,7 @@ Prep4DeepDEP_custom <- function (exp.data = NULL, mut.data = NULL, meth.data = N
                     135540000, 135010000, 133860000, 115170000, 107350000, 
                     102540000, 90360000, 81200000, 78080000, 59130000, 63030000, 
                     48130000, 51310000, 155280000, 59380000)
-  chrom_bin <- ceiling(chrom_length/BP_SIZE) # 10kb -> 100kb
+  chrom_bin <- ceiling(chrom_length/BP_SIZE)
   bigTable <- data.frame(matrix(data = 0, ncol = length(cellLine) + 1, nrow = sum(chrom_bin)), stringsAsFactors = FALSE)
   colnames(bigTable) <- c("CNA", cellLine)
   
@@ -1062,16 +1069,17 @@ Prep4DeepDEP_custom <- function (exp.data = NULL, mut.data = NULL, meth.data = N
     k = chrom_bin[i] + k
   }
   t1 <- proc.time()
-  load(filtered_table_path)
+  path <- system.file("extdata/", package = "Prep4DeepDEP")
+  load(paste0(path, "cna_table_7460.RData"))
   
-  for (i in unique(tcga_cnv_index$Chr)) {
+  for (i in unique(filterTable$Chr)) {
     pb <- progress_bar$new(format = " Progress: [:bar] :percent, Estimated completion time: :eta",
                            total = ncol(bigTable), # totalnumber of ticks to complete (default 100)
                            clear = FALSE, # whether to clear the progress bar on completion (default TRUE)
-                           width= 80 # width of the progress bar
-    )
+                           width= 80) # width of the progress bar
+                           
     print(paste0("Chromosome : ", i))
-    cna.filterTable <- tcga_cnv_index[which(tcga_cnv_index$Chr == i), ]
+    cna.filterTable <- filterTable[which(filterTable$Chr == i), ]
     idx.chr <- which(cna.original$Chromosome == i)
     Table.chr <- cna.original[idx.chr, ]
     cna.length.chr <- (Table.chr$End - Table.chr$Start) + 1
@@ -1097,7 +1105,7 @@ Prep4DeepDEP_custom <- function (exp.data = NULL, mut.data = NULL, meth.data = N
       }
     }
   }
-  bigTable.filter <- merge(tcga_cnv_index, bigTable, by = "CNA", all.x = TRUE, sort = FALSE)
+  bigTable.filter <- merge(filterTable, bigTable, by = "CNA", all.x = TRUE, sort = FALSE)
   bigTable <- bigTable.filter[, -c(2:4)]
   if (exportTable == TRUE) {
     data.table::fwrite(bigTable, file = paste(filenames, nrow(bigTable.filter), "_CNA_filter.txt", sep = "_"), sep = "\t", col.names = TRUE, 
