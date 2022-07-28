@@ -741,33 +741,30 @@ venn_diagram <- function(inter_list, save_path = ".", type = "", ggtitle_text = 
 }
 
 Prep4DeepDEP_custom <- function (exp.data = NULL, mut.data = NULL, meth.data = NULL, cna.data = NULL, dep.data = NULL, 
-                          mode = c("Training", "Prediction"), filename.out = "data",
-                          TCGA_INDEX_PATH = "TCGA_INDEX/"){
+                          mode = c("Training", "Prediction"), filename.out = "data"){
   
     check.cellNames <- NULL
     cat("Mode", mode, "\n\n")
-    data_save_path <- Sys.time() %>% str_split(pattern = " ") %>% unlist() %>% .[1] %>% 
-      paste0("DATA/", ., "/")
-    dir.create(data_save_path, recursive = TRUE,showWarnings = FALSE)  
-    
-    # TCGA_INDEX_PATH <- "TCGA_INDEX/"
-    
-    if (sum(is.null(exp.data), is.null(mut.data), is.null(meth.data), is.null(cna.data)) == 4) {
+    path <- system.file("extdata/", package = "Prep4DeepDEP")
+    if (sum(is.null(exp.data), is.null(mut.data), is.null(meth.data), 
+            is.null(cna.data)) == 4) {
       stop(c("All genomic profiles are missing. Please provide at least one of mut.data, exp.data, meth.data, and cna.data."))
     }
     if (is.null(dep.data) & tolower(mode) == "prediction") {
-      cat("dep.data is not provided, running with the default 1298 DepOIs...", "\n")
-      load(paste0(TCGA_INDEX_PATH, "CUSTOM/custom_dep_genes_1227.RData"))
+      cat("dep.data is not provided, running with the default 1298 DepOIs...", 
+          "\n")
+      load(paste0(path, "default_dep_genes_1298.RData"))
     }
     if (is.null(dep.data) & tolower(mode) == "training") {
-        cat("dep.data is not provided. Please provide gene dependency scores for the training mode...", "\n")
+      cat("dep.data is not provided. Please provide gene dependency scores for the training mode...", 
+          "\n")
     }
     if (ncol(dep.data) == 1 & tolower(mode) == "training") {
-        stop(c("Only one column detected in dep.data. Please provide gene dependency symbols and scores for the training mode."), call. = FALSE)
+      stop(c("Only one column detected in dep.data. Please provide gene dependency symbols and scores for the training mode."), 
+           call. = FALSE)
     }
-
-    load(paste0(TCGA_INDEX_PATH, "CUSTOM/gene_fingerprints_CGP.RData")) # gene signature
-    list.genes <- Prep4DeepDEP::.CheckGeneSymbol(dep.data = dep.data, filename.out = filename.out)
+    load(paste0(path, "gene_fingerprints_CGP.RData"))
+    list.genes <- .CheckGeneSymbol(dep.data = dep.data, filename.out = filename.out)
     n <- nrow(list.genes)
     
     # Gene expression
@@ -787,7 +784,7 @@ Prep4DeepDEP_custom <- function (exp.data = NULL, mut.data = NULL, meth.data = N
         inputData <- exp.data[!duplicated(exp.data$Gene), ]
 
         ######## TCGA - CCLE intersection        
-        load(paste0(TCGA_INDEX_PATH, "CUSTOM/ccle_exp_custom_5454.RData"))
+        load(paste0(path, "ccle_exp_for_missing_value_6016.RData"))
 
         # outputData <- merge(exp.index, inputData, by = "Gene", sort = FALSE, all.x = TRUE)
         outputData <- merge(exp.index, inputData, by = "Gene", sort = FALSE, all.x = TRUE)
@@ -809,11 +806,11 @@ Prep4DeepDEP_custom <- function (exp.data = NULL, mut.data = NULL, meth.data = N
         outputData.final.exp <- outputData.final.exp[, c("Gene", check.cellNames)]
         if (tolower(mode) == "prediction") {
             data.table::fwrite(outputData.final.exp, 
-                               file = paste0(data_save_path, paste(filename.out, "exp_prediction.txt", sep = "_")), sep = "\t", 
+                               file = paste(filename.out, "exp_prediction.txt", sep = "_"), sep = "\t", 
                                row.names = FALSE, col.names = TRUE, quote = FALSE)
         }
         if (tolower(mode) == "training") {
-          k = 2:5 # k = 2:ncol(outputData.final.exp)
+          k = 2:ncol(outputData.final.exp)
           rep_col_list <- pbmcapply::pbmclapply(X = k, FUN = function(index){
             rep_col.1 <- do.call("cbind", replicate(n, outputData.final.exp[, index], simplify = FALSE)) # 
             colnames(rep_col.1) <- paste0("C", index-1, "G", seq(1, n, 1))
@@ -823,7 +820,7 @@ Prep4DeepDEP_custom <- function (exp.data = NULL, mut.data = NULL, meth.data = N
           rep_col <- rep_col_list %>% 
             bind_cols(tibble(Gene = rownames(outputData.final.exp)), .) 
             
-          data.table::fwrite(rep_col, file = paste0(data_save_path, paste(filename.out, "exp_training.txt", sep = "_")), 
+          data.table::fwrite(rep_col, file = paste(filename.out, "exp_training.txt", sep = "_"), 
                       sep = "\t", row.names = FALSE, col.names = TRUE, quote = FALSE)
         }
         cat("Exp completed!", "\n\n")
@@ -845,7 +842,7 @@ Prep4DeepDEP_custom <- function (exp.data = NULL, mut.data = NULL, meth.data = N
       inputData <- mut.data[!duplicated(mut.data$Gene), ]
       
       ######## TCGA - CCLE intersection        
-      load(paste0(TCGA_INDEX_PATH, "CUSTOM/ccle_mut_custom_4946.RData"))
+      load(paste0(path, "ccle_mut_for_missing_value_4539.RData"))
       
       outputData <- merge(mut.index, inputData, by = "Gene", sort = FALSE, all.x = TRUE)
       Gene <- outputData$Gene
@@ -864,7 +861,7 @@ Prep4DeepDEP_custom <- function (exp.data = NULL, mut.data = NULL, meth.data = N
       outputData.final.mut <- outputData.final.mut[, c("Gene", check.cellNames)]
       if (tolower(mode) == "prediction") {
         data.table::fwrite(outputData.final.mut, 
-                           file = paste0(data_save_path, paste(filename.out, "mut_prediction.txt", sep = "_")), 
+                           file = paste(filename.out, "mut_prediction.txt", sep = "_"), 
                            sep = "\t", row.names = FALSE, col.names = TRUE, quote = FALSE)
       }
       if (tolower(mode) == "training") {
@@ -879,7 +876,7 @@ Prep4DeepDEP_custom <- function (exp.data = NULL, mut.data = NULL, meth.data = N
           bind_cols(tibble(Gene = rownames(outputData.final.mut)), .) 
         
         data.table::fwrite(rep_col, 
-                           file = paste0(data_save_path,paste(filename.out, "mut_training.txt", sep = "_")), 
+                           file = paste(filename.out, "mut_training.txt", sep = "_"), 
                            sep = "\t", row.names = FALSE, col.names = TRUE, quote = FALSE)
         }
       cat("Mut completed!", "\n\n")
@@ -901,7 +898,7 @@ Prep4DeepDEP_custom <- function (exp.data = NULL, mut.data = NULL, meth.data = N
         cat("Precessing", paste(length(check.cellNames), "cell lines..."), "\n")
         inputData <- meth.data[!duplicated(meth.data$Probe), ]
         
-        load(paste0(TCGA_INDEX_PATH, "CUSTOM/ccle_meth_custom_6231.RData"))
+        load(paste0(path, "ccle_meth_for_missing_value_6617.RData"))
         
         outputData <- merge(meth.index, inputData, by = "Probe", sort = FALSE, all.x = TRUE)
         Probe <- outputData$Probe
@@ -925,7 +922,7 @@ Prep4DeepDEP_custom <- function (exp.data = NULL, mut.data = NULL, meth.data = N
         outputData.final.meth <- outputData.final.meth[, c("Probe", check.cellNames)]
         if (tolower(mode) == "prediction") {
             data.table::fwrite(outputData.final.meth, 
-                               file = paste0(data_save_path, paste(filename.out, "meth_prediction.txt", sep = "_")), 
+                               file = paste(filename.out, "meth_prediction.txt", sep = "_"), 
                                sep = "\t", row.names = FALSE, col.names = TRUE, quote = FALSE)
         }
         if (tolower(mode) == "training") {
@@ -940,7 +937,7 @@ Prep4DeepDEP_custom <- function (exp.data = NULL, mut.data = NULL, meth.data = N
             bind_cols(tibble(Probe = rownames(outputData.final.meth)), .) 
           
           data.table::fwrite(rep_col, 
-                             file = paste0(data_save_path, paste(filename.out, "meth_training.txt", sep = "_")), 
+                             file = paste(filename.out, "meth_training.txt", sep = "_"), 
                              sep = "\t", row.names = FALSE, col.names = TRUE, quote = FALSE)
         }
         cat("Meth completed!", "\n\n")
@@ -955,7 +952,7 @@ Prep4DeepDEP_custom <- function (exp.data = NULL, mut.data = NULL, meth.data = N
         outputData <- fingerprint[, idx]
         if (tolower(mode) == "prediction") {
             data.table::fwrite(outputData, 
-                               file = paste0(data_save_path, paste(filename.out, "fingerprint_prediction.txt", sep = "_")), 
+                               file = paste(filename.out, "fingerprint_prediction.txt", sep = "_"), 
                                sep = "\t", row.names = FALSE, col.names = FALSE, quote = FALSE)
         }
         if (tolower(mode) == "training") {
@@ -963,7 +960,7 @@ Prep4DeepDEP_custom <- function (exp.data = NULL, mut.data = NULL, meth.data = N
                                       do.call("cbind", replicate(ncell, outputData[, -1], simplify = FALSE)))
             outputData.train[1, ] <- c("GeneSet", paste0(paste0("C", rep(seq(1, ncell, 1), each = n)), "G", seq(1, n, 1)))
             data.table::fwrite(outputData.train, 
-                               file = paste0(data_save_path, paste(filename.out, "fingerprint_training.txt", sep = "_")), 
+                               file = paste(filename.out, "fingerprint_training.txt", sep = "_"), 
                                sep = "\t", row.names = FALSE, col.names = FALSE, quote = FALSE)
             
         }
@@ -988,7 +985,7 @@ Prep4DeepDEP_custom <- function (exp.data = NULL, mut.data = NULL, meth.data = N
           
         crispr.output <- bind_cols(tibble(Dep_Score = "score"), crispr.output)
         data.table::fwrite(crispr.output, 
-                           file = paste0(data_save_path, paste(filename.out, "DepScore_training.txt", sep = "_")), 
+                           file = paste(filename.out, "DepScore_training.txt", sep = "_"), 
                            sep = "\t", row.names = FALSE, col.names = TRUE, quote = FALSE)
         
         cat("Gene dependency scores (training) completed!", "\n\n")
@@ -1000,7 +997,7 @@ Prep4DeepDEP_custom <- function (exp.data = NULL, mut.data = NULL, meth.data = N
         cat(c("CNA started..."), "\n")
         ncell <- length(unique(cna.data$CCLE_name))
         if (is.null(check.cellNames)) {
-            outputData.cna <- .PrepCNA_custom(cna.original = cna.data, filename.out, exportTable = FALSE)
+            outputData.cna <- .PrepCNA(cna.original = cna.data, filename.out, exportTable = FALSE)
         } else {
             idx <- which(cna.data$CCLE_name %in% check.cellNames)
             if (length(check.cellNames) != length(unique(cna.data$CCLE_name[idx])) | sum(check.cellNames %in% unique(cna.data$CCLE_name[idx])) != 
@@ -1014,7 +1011,7 @@ Prep4DeepDEP_custom <- function (exp.data = NULL, mut.data = NULL, meth.data = N
         if (tolower(mode) == "prediction") {
             colnames(outputData.cna)[1] <- "Bin"
             data.table::fwrite(outputData.cna, 
-                               file = paste0(data_save_path, paste(filename.out, "cna_prediction.txt", sep = "_")), 
+                               file = paste(filename.out, "cna_prediction.txt", sep = "_"), 
                                sep = "\t", row.names = FALSE, col.names = TRUE, quote = FALSE)
         }
         if (tolower(mode) == "training") {
@@ -1029,7 +1026,7 @@ Prep4DeepDEP_custom <- function (exp.data = NULL, mut.data = NULL, meth.data = N
             bind_cols(tibble(Bin = outputData.cna$CNA), .) 
           
           data.table::fwrite(rep_col, 
-                             file = paste0(data_save_path, paste(filename.out, "cna_training.txt", sep = "_")), 
+                             file = paste(filename.out, "cna_training.txt", sep = "_"), 
                              sep = "\t", row.names = FALSE, col.names = TRUE, quote = FALSE)
         }
         cat("CNA completed!", "\n\n")
