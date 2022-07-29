@@ -1003,7 +1003,7 @@ Prep4DeepDEP_custom <- function (exp.data = NULL, mut.data = NULL, meth.data = N
         cat(c("CNA started..."), "\n")
         ncell <- length(unique(cna.data$CCLE_name))
         if (is.null(check.cellNames)) {
-            outputData.cna <- .PrepCNA(cna.original = cna.data, filename.out, exportTable = FALSE)
+            outputData.cna <- .PrepCNA_custom(cna.original = cna.data, filename.out, exportTable = FALSE)
         } else {
             idx <- which(cna.data$CCLE_name %in% check.cellNames)
             if (length(check.cellNames) != length(unique(cna.data$CCLE_name[idx])) | sum(check.cellNames %in% unique(cna.data$CCLE_name[idx])) != 
@@ -1040,49 +1040,52 @@ Prep4DeepDEP_custom <- function (exp.data = NULL, mut.data = NULL, meth.data = N
     }
 }
 
-.PrepCNA_custom <- function (cna.original, filenames, exportTable = FALSE) {
-  library(progress)
-  BP_SIZE <- 10 ^ 4
+.PrepCNA_custom <- function (cna.original, filenames, exportTable = FALSE){
   cellLine <- unique(cna.original$CCLE_name)
-  
-  # chr type change
-  cna.original <- cna.original %>%  
-    mutate(Chromosome = ifelse(tolower(Chromosome) == "x", "23", 
-                               ifelse(tolower(Chromosome) == "y", "24", Chromosome))) %>% 
-    mutate(Chromosome = as.numeric(Chromosome))
-  
-  chr <- cna.original %>% pull(Chromosome) %>% unique()
+  if (sum(tolower(colnames(cna.original)) %in% c("chr", "chromosome")) == 
+      1) {
+    col_idx <- which(tolower(colnames(cna.original)) %in% 
+                       c("chr", "chromosome"))
+    cna.original[which(tolower(cna.original[, col_idx]) == 
+                         "x"), col_idx] <- 23
+    cna.original[which(tolower(cna.original[, col_idx]) == 
+                         "y"), col_idx] <- 24
+    colnames(cna.original)[col_idx] <- "Chromosome"
+  }
+  chr <- unique(cna.original[, col_idx])
   chrom_length <- c(249260000, 243200000, 198030000, 191160000, 
                     180920000, 171120000, 159140000, 146370000, 141220000, 
                     135540000, 135010000, 133860000, 115170000, 107350000, 
                     102540000, 90360000, 81200000, 78080000, 59130000, 63030000, 
                     48130000, 51310000, 155280000, 59380000)
-  chrom_bin <- ceiling(chrom_length/BP_SIZE)
-  bigTable <- data.frame(matrix(data = 0, ncol = length(cellLine) + 1, nrow = sum(chrom_bin)), stringsAsFactors = FALSE)
+  chrom_bin <- ceiling(chrom_length/10^4)
+  bigTable <- data.frame(matrix(data = 0, ncol = length(cellLine) + 
+                                  1, nrow = sum(chrom_bin)), stringsAsFactors = FALSE)
   colnames(bigTable) <- c("CNA", cellLine)
-  
   k = 1
   for (i in 1:length(chr)) {
     bin_start <- seq(0, chrom_bin[i] - 1, 1)
     bin_end <- seq(1, chrom_bin[i], 1)
-    bigTable$CNA[k:(k + chrom_bin[i] - 1)] <- paste(paste0("chr", i), paste0(bin_start, "to", bin_end), "1m", sep = "_")
+    bigTable$CNA[k:(k + chrom_bin[i] - 1)] <- paste(paste0("chr", 
+                                                           i), paste0(bin_start, "to", bin_end), "10k", sep = "_")
     k = chrom_bin[i] + k
   }
   t1 <- proc.time()
   path <- system.file("extdata/", package = "Prep4DeepDEP")
   load(paste0(path, "cna_table_7460.RData"))
-  
   for (i in unique(filterTable$Chr)) {
     pb <- progress_bar$new(format = " Progress: [:bar] :percent, Estimated completion time: :eta",
                            total = ncol(bigTable), # totalnumber of ticks to complete (default 100)
                            clear = FALSE, # whether to clear the progress bar on completion (default TRUE)
                            width= 80) # width of the progress bar
-                           
     print(paste0("Chromosome : ", i))
-    cna.filterTable <- filterTable[which(filterTable$Chr == i), ]
+    
+    cna.filterTable <- filterTable[which(filterTable$Chr == 
+                                           i), ]
     idx.chr <- which(cna.original$Chromosome == i)
     Table.chr <- cna.original[idx.chr, ]
-    cna.length.chr <- (Table.chr$End - Table.chr$Start) + 1
+    cna.length.chr <- (Table.chr$End - Table.chr$Start) + 
+      1
     if (i == 1) {
       l = 0
     }
@@ -1095,20 +1098,26 @@ Prep4DeepDEP_custom <- function (exp.data = NULL, mut.data = NULL, meth.data = N
       cellTable.chr <- Table.chr[idx.cell, ]
       cna.length <- cna.length.chr[idx.cell]
       for (k in cna.filterTable$End) {
-        end_matrix <- data.frame(matrix(data = 1, nrow = nrow(cellTable.chr)) * BP_SIZE * k, stringsAsFactors = FALSE)
+        end_matrix <- data.frame(matrix(data = 1, nrow = nrow(cellTable.chr)) * 
+                                   10^4 * k, stringsAsFactors = FALSE)
         end_matrix$cellTable <- cellTable.chr$End
-        start_matrix <- data.frame(matrix(data = 1, nrow = nrow(cellTable.chr)) * BP_SIZE * (k - 1) + 1, stringsAsFactors = FALSE)
+        start_matrix <- data.frame(matrix(data = 1, nrow = nrow(cellTable.chr)) * 
+                                     10^4 * (k - 1) + 1, stringsAsFactors = FALSE)
         start_matrix$cellTable <- cellTable.chr$Start
-        overlap.length <- (BP_SIZE) + cna.length - (apply(end_matrix, 1, max) - apply(start_matrix, 1, min) + 1)
+        overlap.length <- (10^4) + cna.length - (apply(end_matrix, 
+                                                       1, max) - apply(start_matrix, 1, min) + 1)
         overlap.length[overlap.length < 0] <- 0
-        bigTable[l + k, j] <- round(sum(overlap.length * cellTable.chr$Segment_Mean)/BP_SIZE, digits = 4)
+        bigTable[l + k, j] <- round(sum(overlap.length * 
+                                          cellTable.chr$Segment_Mean)/10^4, digits = 4)
       }
     }
   }
-  bigTable.filter <- merge(filterTable, bigTable, by = "CNA", all.x = TRUE, sort = FALSE)
+  bigTable.filter <- merge(filterTable, bigTable, by = "CNA", 
+                           all.x = TRUE, sort = FALSE)
   bigTable <- bigTable.filter[, -c(2:4)]
   if (exportTable == TRUE) {
-    data.table::fwrite(bigTable, file = paste(filenames, nrow(bigTable.filter), "_CNA_filter.txt", sep = "_"), sep = "\t", col.names = TRUE, 
+    write.table(bigTable, file = paste(filenames, nrow(bigTable.filter), 
+                                       "_CNA_filter.txt", sep = "_"), sep = "\t", col.names = TRUE, 
                 row.names = FALSE, quote = FALSE)
   }
   t2 <- proc.time()
@@ -1116,4 +1125,5 @@ Prep4DeepDEP_custom <- function (exp.data = NULL, mut.data = NULL, meth.data = N
   print(c("Computation time (mins)", t[1:3]))
   return(bigTable)
 }
+
 
