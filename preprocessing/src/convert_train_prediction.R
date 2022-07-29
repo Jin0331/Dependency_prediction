@@ -21,7 +21,7 @@ Prep4DeepDEP_custom(
   # mut.data = ccle_mut_com ,
   # meth.data = ccle_meth_com ,
   cna.data = ccle_cna_com,
-  dep.data = ccle_gene_dependency_com ,
+  dep.data = ccle_gene_dependency_com,
   mode = "training",
   filename.out = paste0(save_path, "/training_custom")
 )

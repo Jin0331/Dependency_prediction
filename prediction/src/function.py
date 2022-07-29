@@ -30,6 +30,73 @@ def load_data(filename):
     
     return data_np, sample_names, gene_names
 
+def trainset_load(npz_path="prediction/data/ccl_complete_data_501CCL_1298DepOI_614727samples.npz", 
+                  filename="training_custom"):
+    
+    if exists(npz_path) is False:
+        # expression
+        if exists(TEMP_PATH + filename + "_exp_training.npy") is False:
+            data_exp, sample_names_exp, property_names_exp = load_data(TRAIN_PATH + filename + "_exp_training.txt")
+            np.save(TEMP_PATH + filename + "_exp_training.npy", data_exp)
+        else:
+            data_exp = np.load(TEMP_PATH + filename + "_exp_training.npy")
+        print("exp load.. completed")    
+
+        # mutation
+        if exists(TEMP_PATH + filename + "_mut_training.npy") is False:
+            data_mut, sample_names_mut, property_names_mut = load_data(TRAIN_PATH + filename + "_mut_training.txt")
+            np.save(TEMP_PATH + filename + "_mut_training.npy", data_mut)
+        else:
+            data_mut = np.load(TEMP_PATH + filename + "_mut_training.npy")
+        print("mut load.. completed")
+
+        # copy number alteration
+        if exists(TEMP_PATH + filename + "_cna_training.npy") is False:
+            data_cna, sample_names_cna, property_names_cna = load_data(TRAIN_PATH + filename + "_cna_training.txt")
+            np.save(TEMP_PATH + filename + "_cna_training.npy", data_cna)
+        else:
+            data_cna = np.load(TEMP_PATH + filename + "_cna_training.npy")
+        print("cna load.. completed")
+
+        # methylation
+        if exists(TEMP_PATH + filename + "_meth_training.npy") is False:
+            data_meth, sample_names_meth, property_names_meth = load_data(TRAIN_PATH + filename + "_meth_training.txt")
+            np.save(TEMP_PATH + filename + "_meth_training.npy", data_meth)
+        else:
+            data_meth = np.load(TEMP_PATH + filename + "_meth_training.npy")
+        print("meth load.. completed")
+
+        # dependency score
+        if exists(TEMP_PATH + filename + "_DepScore_training.npy") is False:
+            data_dep, sample_names_dep, property_names_dep = load_data(TRAIN_PATH + filename + "_DepScore_training.txt")
+            np.save(TEMP_PATH + filename + "_DepScore_training.npy", data_dep)
+        else:
+            data_dep = np.load(TEMP_PATH + filename + "_DepScore_training.npy")
+        print("dep load.. completed")
+
+        # fingerprint
+        if exists(TEMP_PATH + filename + "_fingerprint_training.npy") is False:
+            data_fprint, sample_names_fprint, property_names_fprint = load_data(TRAIN_PATH + filename + "_fingerprint_training.txt")
+            np.save(TEMP_PATH + filename + "_fingerprint_training.npy", data_fprint)
+        else:
+            data_fprint = np.load(TEMP_PATH + filename + "_fingerprint_training.npy")
+        print("fingerprint load.. completed")
+
+        np.savez_compressed(npz_path, 
+                            data_exp=data_exp, data_mut=data_mut, data_cna=data_cna, data_meth=data_meth,
+                            data_dep=data_dep, data_fprint=data_fprint)
+    else :
+        data = np.load(npz_path)
+        data_exp = data['data_exp']
+        data_mut = data['data_mut']
+        data_cna = data['data_cna']
+        data_meth = data['data_meth']
+        data_fprint = data['data_fprint']
+        data_dep = data['data_dep']
+        
+    return data_exp, data_mut, data_cna, data_meth, data_fprint, data_dep
+
+
 def full_model():
     with tf.device('/cpu:0'):
         model_mut = Sequential()
