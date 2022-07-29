@@ -18,25 +18,17 @@ import time
 import pandas as pd
 import datatable as dt
 import matplotlib.pyplot as plt
-
+import gc
 
 def load_data(filename):
-    data = []
-    gene_names = []
-#     data_labels = []
-    lines = open(filename).readlines()
-    sample_names = lines[0].replace('\n', '').split('\t')[1:]
-    dx = 1
-
-    for line in tqdm(lines[dx:], leave=True):
-        values = line.replace('\n', '').split('\t')
-        gene = str.upper(values[0])
-        gene_names.append(gene)
-        data.append(values[1:])
-    data = np.array(data, dtype='float32')
-    data = np.transpose(data)
-
-    return data, sample_names, gene_names
+    df_dt = dt.fread(filename, sep="\t")
+    gene_names = df_dt[0].to_list()[0]
+    sample_names = list(df_dt.names[1:])
+    data_np = df_dt[:, 1:].to_numpy()
+    data_np = np.transpose(data_np)
+    gc.collect()
+    
+    return data_np, sample_names, gene_names
 
 def full_model():
     with tf.device('/cpu:0'):
