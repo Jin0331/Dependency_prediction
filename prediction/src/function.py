@@ -189,7 +189,7 @@ def full_model(data_mut, data_exp, data_cna, data_meth,
         # callback
         history = EarlyStopping(monitor='val_loss', min_delta=0, patience=3, verbose=1, mode='min') # early stopping
         filepath=save_path + "full_weights.best.hdf5"
-        checkpoint = ModelCheckpoint(filepath, monitor='val_los', verbose=1, save_best_only=True, mode='auto')
+        checkpoint = ModelCheckpoint(filepath, monitor='val_loss', verbose=1, save_best_only=True, mode='auto')
 
         model_final.compile(loss='mse', optimizer='adam')
         model_final.fit([data_mut[id_train], data_exp[id_train], data_cna[id_train], data_meth[id_train],
@@ -202,92 +202,125 @@ def full_model(data_mut, data_exp, data_cna, data_meth,
         
         return model_final, history   
 
-def exp_mut_cna_model(premodel_exp, premodel_mut, premodel_cna, data_fprint_shape):
+def mut_exp_cna_model(data_mut, data_exp, data_cna, 
+               data_fprint, data_dep, id_train, id_test, 
+               premodel_mut, premodel_exp, premodel_cna, premodel_meth,
+               save_path):
+    t = time.time()
     with tf.device('/cpu:0'):
-        model_mut = Sequential()
-        model_mut.add(Dense(1000, input_dim=premodel_mut[0][0].shape[0], activation=activation_func,
+        model_mut = models.Sequential()
+        model_mut.add(Dense(output_dim=1000, input_dim=premodel_mut[0][0].shape[0], activation=activation_func,
                             weights=premodel_mut[0], trainable=True))
-        model_mut.add(Dense(100, input_dim=1000, activation=activation_func, weights=premodel_mut[1],
+        model_mut.add(Dense(output_dim=100, input_dim=1000, activation=activation_func, weights=premodel_mut[1],
                             trainable=True))
-        model_mut.add(Dense(50, input_dim=100, activation=activation_func, weights=premodel_mut[2],
+        model_mut.add(Dense(output_dim=50, input_dim=100, activation=activation_func, weights=premodel_mut[2],
                             trainable=True))
 
-        model_exp = Sequential()
-        model_exp.add(Dense(500, input_dim=premodel_exp[0][0].shape[0], activation=activation_func,
+        # subnetwork of expression
+        model_exp = models.Sequential()
+        model_exp.add(Dense(output_dim=500, input_dim=premodel_exp[0][0].shape[0], activation=activation_func,
                             weights=premodel_exp[0], trainable=True))
-        model_exp.add(Dense(200, input_dim=500, activation=activation_func, weights=premodel_exp[1],
+        model_exp.add(Dense(output_dim=200, input_dim=500, activation=activation_func, weights=premodel_exp[1],
                             trainable=True))
-        model_exp.add(Dense(50, input_dim=200, activation=activation_func, weights=premodel_exp[2],
+        model_exp.add(Dense(output_dim=50, input_dim=200, activation=activation_func, weights=premodel_exp[2],
                             trainable=True))
 
-        model_cna = Sequential()
-        model_cna.add(Dense(500, input_dim=premodel_cna[0][0].shape[0], activation=activation_func,
+        # subnetwork of copy number alterations
+        model_cna = models.Sequential()
+        model_cna.add(Dense(output_dim=500, input_dim=premodel_cna[0][0].shape[0], activation=activation_func,
                             weights=premodel_cna[0], trainable=True))
-        model_cna.add(Dense(200, input_dim=500, activation=activation_func, weights=premodel_cna[1],
+        model_cna.add(Dense(output_dim=200, input_dim=500, activation=activation_func, weights=premodel_cna[1],
                             trainable=True))
-        model_cna.add(Dense(50, input_dim=200, activation=activation_func, weights=premodel_cna[2],
+        model_cna.add(Dense(output_dim=50, input_dim=200, activation=activation_func, weights=premodel_cna[2],
                             trainable=True))
 
         # subnetwork of gene fingerprints
-        model_gene = Sequential()
-        # model_gene.add(Dense(1000, input_dim=data_fprint.shape[1], activation=activation_func, kernel_initializer=init, trainable=True))
-        model_gene.add(Dense(1000, input_dim=data_fprint_shape, activation=activation_func, kernel_initializer=init, trainable=True))
-        model_gene.add(Dense(100, input_dim=1000, activation=activation_func, kernel_initializer=init, trainable=True))
-        model_gene.add(Dense(50, input_dim=100, activation=activation_func, kernel_initializer=init, trainable=True))
-
-        conc = Concatenate()([model_mut.output, model_exp.output, 
-                              model_cna.output, model_gene.output])
-
-        model_pre = Dense(dense_layer_dim, input_dim=200, activation=activation_func, kernel_initializer=init,
-                              trainable=True)(conc)
-        model_pre = Dense(dense_layer_dim, input_dim=dense_layer_dim, activation=activation_func, kernel_initializer=init,
-                              trainable=True)(model_pre)
-        model_pre = Dense(1, input_dim=dense_layer_dim, activation=activation_func2, kernel_initializer=init,
-                              trainable=True)(model_pre)
-
-        model_final = Model([model_mut.input, model_exp.input, model_cna.input, model_gene.input], model_pre)
-        
-        
-        return model_final
-    
-    
-def exp_mut_model(premodel_exp, premodel_mut, data_fprint_shape):
-    with tf.device('/cpu:0'):
-        model_mut = Sequential()
-        model_mut.add(Dense(1000, input_dim=premodel_mut[0][0].shape[0], activation=activation_func,
-                            weights=premodel_mut[0], trainable=True))
-        model_mut.add(Dense(100, input_dim=1000, activation=activation_func, weights=premodel_mut[1],
-                            trainable=True))
-        model_mut.add(Dense(50, input_dim=100, activation=activation_func, weights=premodel_mut[2],
-                            trainable=True))
-
-        model_exp = Sequential()
-        model_exp.add(Dense(500, input_dim=premodel_exp[0][0].shape[0], activation=activation_func,
-                            weights=premodel_exp[0], trainable=True))
-        model_exp.add(Dense(200, input_dim=500, activation=activation_func, weights=premodel_exp[1],
-                            trainable=True))
-        model_exp.add(Dense(50, input_dim=200, activation=activation_func, weights=premodel_exp[2],
-                            trainable=True))
-        
-        # subnetwork of gene fingerprints
-        model_gene = Sequential()
-        model_gene.add(Dense(1000, input_dim=data_fprint_shape, activation=activation_func, kernel_initializer=init,
+        model_gene = models.Sequential()
+        model_gene.add(Dense(output_dim=1000, input_dim=data_fprint.shape[1], activation=activation_func, init=init,
                              trainable=True))
-        model_gene.add(Dense(100, input_dim=1000, activation=activation_func, kernel_initializer=init, trainable=True))
-        model_gene.add(Dense(50, input_dim=100, activation=activation_func, kernel_initializer=init, trainable=True))
+        model_gene.add(Dense(output_dim=100, input_dim=1000, activation=activation_func, init=init, trainable=True))
+        model_gene.add(Dense(output_dim=50, input_dim=100, activation=activation_func, init=init, trainable=True))
 
-        conc = Concatenate()([model_mut.output, model_exp.output, model_gene.output])
-
-        model_pre = Dense(dense_layer_dim, input_dim=150, activation=activation_func, kernel_initializer=init,
-                              trainable=True)(conc)
-        model_pre = Dense(dense_layer_dim, input_dim=dense_layer_dim, activation=activation_func, kernel_initializer=init,
-                              trainable=True)(model_pre)
-        model_pre = Dense(1, input_dim=dense_layer_dim, activation=activation_func2, kernel_initializer=init,
-                              trainable=True)(model_pre)
-
-        model_final = Model([model_mut.input, model_exp.input, model_gene.input], model_pre)
+        # prediction network
+        model_final = models.Sequential()
+        model_final.add(Merge([model_mut, model_exp, model_cna, model_gene], mode='concat'))
+        model_final.add(Dense(output_dim=dense_layer_dim, input_dim=200, activation=activation_func, init=init,
+                              trainable=True))
+        model_final.add(Dense(output_dim=dense_layer_dim, input_dim=dense_layer_dim, activation=activation_func, init=init,
+                              trainable=True))
+        model_final.add(Dense(output_dim=1, input_dim=dense_layer_dim, activation=activation_func2, init=init,
+                              trainable=True))
         
-        return model_final    
+        # callback
+        history = EarlyStopping(monitor='val_loss', min_delta=0, patience=3, verbose=1, mode='min') # early stopping
+        filepath=save_path + "mut_exp_cna_weights.best.hdf5"
+        checkpoint = ModelCheckpoint(filepath, monitor='val_loss', verbose=1, save_best_only=True, mode='auto')
+
+        model_final.compile(loss='mse', optimizer='adam')
+        model_final.fit([data_mut[id_train], data_exp[id_train], data_cna[id_train],
+                         data_fprint[id_train]], data_dep[id_train], nb_epoch=30,
+                    validation_split=2/9, batch_size=batch_size, shuffle=True, callbacks=[history, checkpoint])
+        cost_testing = model_final.evaluate([data_mut[id_test], data_exp[id_test], data_cna[id_test],
+                         data_fprint[id_test]], data_dep[id_test], verbose=0,
+                                        batch_size=batch_size)
+        print("\n\nMut_Exp_CNA-DeepDEP model training completed in %.1f mins.\nloss:%.4f valloss:%.4f testloss:%.4f" % ((time.time() - t)/60, history.model.model.history.history['loss'][history.stopped_epoch], history.model.model.history.history['val_loss'][history.stopped_epoch], cost_testing))
+        
+        return model_final, history   
+    
+    
+def mut_exp_model(data_mut, data_exp, data_fprint, data_dep, id_train, id_test, 
+                  premodel_mut, premodel_exp, premodel_cna, premodel_meth,
+               save_path):
+    t = time.time()
+    with tf.device('/cpu:0'):
+        model_mut = models.Sequential()
+        model_mut.add(Dense(output_dim=1000, input_dim=premodel_mut[0][0].shape[0], activation=activation_func,
+                            weights=premodel_mut[0], trainable=True))
+        model_mut.add(Dense(output_dim=100, input_dim=1000, activation=activation_func, weights=premodel_mut[1],
+                            trainable=True))
+        model_mut.add(Dense(output_dim=50, input_dim=100, activation=activation_func, weights=premodel_mut[2],
+                            trainable=True))
+
+        # subnetwork of expression
+        model_exp = models.Sequential()
+        model_exp.add(Dense(output_dim=500, input_dim=premodel_exp[0][0].shape[0], activation=activation_func,
+                            weights=premodel_exp[0], trainable=True))
+        model_exp.add(Dense(output_dim=200, input_dim=500, activation=activation_func, weights=premodel_exp[1],
+                            trainable=True))
+        model_exp.add(Dense(output_dim=50, input_dim=200, activation=activation_func, weights=premodel_exp[2],
+                            trainable=True))
+
+        # subnetwork of gene fingerprints
+        model_gene = models.Sequential()
+        model_gene.add(Dense(output_dim=1000, input_dim=data_fprint.shape[1], activation=activation_func, init=init,
+                             trainable=True))
+        model_gene.add(Dense(output_dim=100, input_dim=1000, activation=activation_func, init=init, trainable=True))
+        model_gene.add(Dense(output_dim=50, input_dim=100, activation=activation_func, init=init, trainable=True))
+
+        # prediction network
+        model_final = models.Sequential()
+        model_final.add(Merge([model_mut, model_exp, model_cna, model_gene], mode='concat'))
+        model_final.add(Dense(output_dim=dense_layer_dim, input_dim=150, activation=activation_func, init=init,
+                              trainable=True))
+        model_final.add(Dense(output_dim=dense_layer_dim, input_dim=dense_layer_dim, activation=activation_func, init=init,
+                              trainable=True))
+        model_final.add(Dense(output_dim=1, input_dim=dense_layer_dim, activation=activation_func2, init=init,
+                              trainable=True))
+        
+        # callback
+        history = EarlyStopping(monitor='val_loss', min_delta=0, patience=3, verbose=1, mode='min') # early stopping
+        filepath=save_path + "mut_exp_weights.best.hdf5"
+        checkpoint = ModelCheckpoint(filepath, monitor='val_loss', verbose=1, save_best_only=True, mode='auto')
+
+        model_final.compile(loss='mse', optimizer='adam')
+        model_final.fit([data_mut[id_train], data_exp[id_train], data_fprint[id_train]], data_dep[id_train], nb_epoch=30,
+                    validation_split=2/9, batch_size=batch_size, shuffle=True, callbacks=[history, checkpoint])
+        cost_testing = model_final.evaluate([data_mut[id_test], data_exp[id_test], data_fprint[id_test]], data_dep[id_test], verbose=0,
+                                        batch_size=batch_size)
+        print("\n\nMut_Exp-DeepDEP model training completed in %.1f mins.\nloss:%.4f valloss:%.4f testloss:%.4f" % ((time.time() - t)/60, history.model.model.history.history['loss'][history.stopped_epoch], history.model.model.history.history['val_loss'][history.stopped_epoch], cost_testing))
+        
+        return model_final, history   
+
 
 def exp_model(data_exp, data_fprint, data_dep, id_train, id_test, premodel_exp):
     t = time.time()
@@ -313,9 +346,12 @@ def exp_model(data_exp, data_fprint, data_dep, id_train, id_test, premodel_exp):
         model_final.add(Dense(output_dim=1, input_dim=dense_layer_dim, activation=activation_func2, init=init))
         
         history = EarlyStopping(monitor='val_loss', min_delta=0, patience=3, verbose=0, mode='min')
+        filepath=save_path + "exp_weights.best.hdf5"
+        checkpoint = ModelCheckpoint(filepath, monitor='val_loss', verbose=1, save_best_only=True, mode='auto')
+
         model_final.compile(loss='mse', optimizer='adam')
         model_final.fit([data_exp[id_train], data_fprint[id_train]], data_dep[id_train], nb_epoch=30,
-                    validation_split=2/9, batch_size=batch_size, shuffle=True, callbacks=[history])
+                    validation_split=2/9, batch_size=batch_size, shuffle=True, callbacks=[history, checkpoint])
         cost_testing = model_final.evaluate([data_exp[id_test], data_fprint[id_test]], data_dep[id_test], verbose=0,
                                         batch_size=batch_size)
         print("\n\nExp-DeepDEP model training completed in %.1f mins.\nloss:%.4f valloss:%.4f testloss:%.4f" % ((time.time() - t)/60, history.model.model.history.history['loss'][history.stopped_epoch], history.model.model.history.history['val_loss'][history.stopped_epoch], cost_testing))
@@ -345,6 +381,8 @@ def mut_model(data_mut, data_fprint, data_dep, id_train, id_test, premodel_mut):
         model_final.add(Dense(output_dim=1, input_dim=dense_layer_dim, activation=activation_func2, init=init))
 
         history = EarlyStopping(monitor='val_loss', min_delta=0, patience=3, verbose=0, mode='min')
+        filepath=save_path + "exp_weights.best.hdf5"
+        checkpoint = ModelCheckpoint(filepath, monitor='val_loss', verbose=1, save_best_only=True, mode='auto')
         model_final.compile(loss='mse', optimizer='adam')
         model_final.fit([data_mut[id_train], data_fprint[id_train]], data_dep[id_train], nb_epoch=30,
                     validation_split=2/9, batch_size=batch_size, shuffle=True, callbacks=[history])
@@ -377,9 +415,11 @@ def meth_model(data_meth, data_fprint, data_dep, id_train, id_test, premodel_met
         model_final.add(Dense(output_dim=1, input_dim=dense_layer_dim, activation=activation_func2, init=init))
         
         history = EarlyStopping(monitor='val_loss', min_delta=0, patience=3, verbose=0, mode='min')
+        filepath=save_path + "meth_weights.best.hdf5"
+        checkpoint = ModelCheckpoint(filepath, monitor='val_loss', verbose=1, save_best_only=True, mode='auto')
         model_final.compile(loss='mse', optimizer='adam')
         model_final.fit([data_meth[id_train], data_fprint[id_train]], data_dep[id_train], nb_epoch=30,
-                    validation_split=2/9, batch_size=batch_size, shuffle=True, callbacks=[history])
+                    validation_split=2/9, batch_size=batch_size, shuffle=True, callbacks=[history, checkpoint])
         cost_testing = model_final.evaluate([data_meth[id_test], data_fprint[id_test]], data_dep[id_test], verbose=0,
                                         batch_size=batch_size)
         print("\n\nMeth-DeepDEP model training completed in %.1f mins.\nloss:%.4f valloss:%.4f testloss:%.4f" % ((time.time() - t)/60, history.model.model.history.history['loss'][history.stopped_epoch], history.model.model.history.history['val_loss'][history.stopped_epoch], cost_testing))
@@ -411,9 +451,11 @@ def cna_model(data_cna, data_fprint, data_dep, id_train, id_test, premodel_cna):
         model_final.add(Dense(output_dim=1, input_dim=dense_layer_dim, activation=activation_func2, init=init))
         
         history = EarlyStopping(monitor='val_loss', min_delta=0, patience=3, verbose=0, mode='min')
+        filepath=save_path + "cna_weights.best.hdf5"
+        checkpoint = ModelCheckpoint(filepath, monitor='val_loss', verbose=1, save_best_only=True, mode='auto')
         model_final.compile(loss='mse', optimizer='adam')
         model_final.fit([data_cna[id_train], data_fprint[id_train]], data_dep[id_train], nb_epoch=30,
-                    validation_split=2/9, batch_size=batch_size, shuffle=True, callbacks=[history])
+                    validation_split=2/9, batch_size=batch_size, shuffle=True, callbacks=[history, checkpoint])
         cost_testing = model_final.evaluate([data_cna[id_test], data_fprint[id_test]], data_dep[id_test], verbose=0,
                                         batch_size=batch_size)
         print("\n\nCNA-DeepDEP model training completed in %.1f mins.\nloss:%.4f valloss:%.4f testloss:%.4f" % ((time.time() - t)/60, history.model.model.history.history['loss'][history.stopped_epoch], history.model.model.history.history['val_loss'][history.stopped_epoch], cost_testing))
