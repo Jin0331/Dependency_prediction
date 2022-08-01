@@ -320,7 +320,7 @@ def mut_exp_model(data_mut, data_exp, data_fprint, data_dep, id_train, id_test,
         return model_final, hs   
 
 
-def exp_model(data_exp, data_fprint, data_dep, id_train, id_test, premodel_exp):
+def exp_model(data_exp, data_fprint, data_dep, id_train, id_test, premodel_exp, save_path):
     t = time.time()
     with tf.device('/cpu:0'):
         model_exp = models.Sequential()
@@ -356,7 +356,7 @@ def exp_model(data_exp, data_fprint, data_dep, id_train, id_test, premodel_exp):
         
         return model_final, hs     
     
-def mut_model(data_mut, data_fprint, data_dep, id_train, id_test, premodel_mut):
+def mut_model(data_mut, data_fprint, data_dep, id_train, id_test, premodel_mut, save_path):
     t = time.time()
     with tf.device('/cpu:0'):
         model_mut = models.Sequential()
@@ -384,14 +384,14 @@ def mut_model(data_mut, data_fprint, data_dep, id_train, id_test, premodel_mut):
         checkpoint = ModelCheckpoint(filepath, monitor='val_loss', verbose=1, save_best_only=True, mode='auto')
         model_final.compile(loss='mse', optimizer='adam')
         hs = model_final.fit([data_mut[id_train], data_fprint[id_train]], data_dep[id_train], nb_epoch=30,
-                    validation_split=2/9, batch_size=batch_size, shuffle=True, callbacks=[history])
+                    validation_split=2/9, batch_size=batch_size, shuffle=True, callbacks=[history, checkpoint])
         cost_testing = model_final.evaluate([data_mut[id_test], data_fprint[id_test]], data_dep[id_test], verbose=0,
                                         batch_size=batch_size)
         print("\n\nMut-DeepDEP model training completed in %.1f mins.\nloss:%.4f valloss:%.4f testloss:%.4f" % ((time.time() - t)/60, history.model.model.history.history['loss'][history.stopped_epoch], history.model.model.history.history['val_loss'][history.stopped_epoch], cost_testing))
         
         return model_final, hs
 
-def meth_model(data_meth, data_fprint, data_dep, id_train, id_test, premodel_meth):
+def meth_model(data_meth, data_fprint, data_dep, id_train, id_test, premodel_meth, save_path):
     t = time.time()
     with tf.device('/cpu:0'):
         model_meth = models.Sequential()
@@ -428,7 +428,7 @@ def meth_model(data_meth, data_fprint, data_dep, id_train, id_test, premodel_met
 
     
     
-def cna_model(data_cna, data_fprint, data_dep, id_train, id_test, premodel_cna):
+def cna_model(data_cna, data_fprint, data_dep, id_train, id_test, premodel_cna, save_path):
     t = time.time()
     with tf.device('/cpu:0'):
         model_cna = models.Sequential()
@@ -538,7 +538,7 @@ def coeff_determination(y_true, y_pred):
     SS_tot = K.sum(K.square( y_true - K.mean(y_true) ) )
     return ( 1 - SS_res/(SS_tot + K.epsilon()) )
 
-def model_train_vis(history):
+def model_train_vis(history, save_path, filename):
     loss = history.history['loss']
     val_loss = history.history['val_loss']
 
@@ -547,5 +547,5 @@ def model_train_vis(history):
     plt.plot(val_loss, 'b', label='Validation')
     plt.title('Training and validation loss(MSE)')
     plt.legend()
-
     plt.show()
+    plt.savefig(save_path + filename +'_model_vis.png', dpi=300)

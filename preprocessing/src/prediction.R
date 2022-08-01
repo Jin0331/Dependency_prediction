@@ -9,11 +9,11 @@ dir.create(save_path, showWarnings = TRUE, recursive = TRUE)
 ccls_wmbio <- read_delim("WMBIO_CCLS.txt", delim = "\t", col_names = F) %>% pull(1)
 
 ccle_omics_extraction(ccls = cclw_wmbio,
-                      CCLE_SAMPLE_INFO = "/home/wmbio/WORK/gitworking/DeepDEP/preprocessing/RAW/CCLs/sample_info.csv", 
-                      CCLE_EXP_PATH = "/home/wmbio/WORK/gitworking/DeepDEP/preprocessing/RAW/CCLs/CCLE_expression.csv",
-                      CCLE_MUT_PATH = "/home/wmbio/WORK/gitworking/DeepDEP/preprocessing/RAW/CCLs/CCLE_mutations.csv",
-                      CCLE_METH_PATH = "/home/wmbio/WORK/gitworking/DeepDEP/preprocessing/RAW/CCLs/CCLs_methylation_GSE68379.Rds",
-                      CCLE_CNA_PATH = "/home/wmbio/WORK/gitworking/DeepDEP/preprocessing/RAW/CCLs/CCLE_segment_cn.csv",
+                      CCLE_SAMPLE_INFO = "/home/wmbio/WORK/gitworking/Dependency_prediction/preprocessing/RAW/CCLs/sample_info.csv", 
+                      CCLE_EXP_PATH = "/home/wmbio/WORK/gitworking/Dependency_prediction/preprocessing/RAW/CCLs/CCLE_expression.csv",
+                      CCLE_MUT_PATH = "/home/wmbio/WORK/gitworking/Dependency_prediction/preprocessing/RAW/CCLs/CCLE_mutations.csv",
+                      CCLE_METH_PATH = "/home/wmbio/WORK/gitworking/Dependency_prediction/preprocessing/RAW/CCLs/CCLs_methylation_GSE68379.Rds",
+                      CCLE_CNA_PATH = "/home/wmbio/WORK/gitworking/Dependency_prediction/preprocessing/RAW/CCLs/CCLE_segment_cn.csv",
                       save_path = save_path)
 
 # predict
