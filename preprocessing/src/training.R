@@ -9,7 +9,6 @@ load("TRAIN/2022-07-27/CCLE-COSMIC-GENEDEPENDENCY.RData")
 
 # for prediction
 test_col <- sample(colnames(ccle_exp_com), 3)
-# test_col <- c("Gene", test_col) %>% unique()
 
 path <- "/home/wmbio/WORK/gitworking/Dependency_prediction/preprocessing/DATA"
 now_date <- Sys.time() %>% str_split(" ") %>% unlist() %>% .[1]
@@ -25,14 +24,3 @@ Prep4DeepDEP_custom(
   mode = "training",
   filename.out = paste0(save_path, "/training_custom")
 )
-
-# predict
-Prep4DeepDEP(
-  exp.data = ccle_exp_com %>% select(Gene, all_of(test_col)),
-  mut.data = ccle_mut_com %>% select(Gene, all_of(test_col)),
-  meth.data = ccle_meth_com %>% select(Probe, all_of(test_col)),
-  cna.data = ccle_cna_com %>% filter(CCLE_name %in% test_col),
-  mode = "prediction",
-  filename.out = "predict")
-
-

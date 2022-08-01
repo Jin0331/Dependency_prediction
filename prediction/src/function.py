@@ -192,19 +192,18 @@ def full_model(data_mut, data_exp, data_cna, data_meth,
         checkpoint = ModelCheckpoint(filepath, monitor='val_loss', verbose=1, save_best_only=True, mode='auto')
 
         model_final.compile(loss='mse', optimizer='adam')
-        model_final.fit([data_mut[id_train], data_exp[id_train], data_cna[id_train], data_meth[id_train],
+        hs = model_final.fit([data_mut[id_train], data_exp[id_train], data_cna[id_train], data_meth[id_train],
                          data_fprint[id_train]], data_dep[id_train], nb_epoch=30,
                     validation_split=2/9, batch_size=batch_size, shuffle=True, callbacks=[history, checkpoint])
         cost_testing = model_final.evaluate([data_mut[id_test], data_exp[id_test], data_cna[id_test], data_meth[id_test],
-                         data_fprint[id_test]], data_dep[id_test], verbose=0,
-                                        batch_size=batch_size)
+                         data_fprint[id_test]], data_dep[id_test], verbose=0, batch_size=batch_size)
         print("\n\nFull-DeepDEP model training completed in %.1f mins.\nloss:%.4f valloss:%.4f testloss:%.4f" % ((time.time() - t)/60, history.model.model.history.history['loss'][history.stopped_epoch], history.model.model.history.history['val_loss'][history.stopped_epoch], cost_testing))
         
-        return model_final, history   
+        return model_final, hs   
 
 def mut_exp_cna_model(data_mut, data_exp, data_cna, 
                data_fprint, data_dep, id_train, id_test, 
-               premodel_mut, premodel_exp, premodel_cna, premodel_meth,
+               premodel_mut, premodel_exp, premodel_cna,
                save_path):
     t = time.time()
     with tf.device('/cpu:0'):
@@ -257,7 +256,7 @@ def mut_exp_cna_model(data_mut, data_exp, data_cna,
         checkpoint = ModelCheckpoint(filepath, monitor='val_loss', verbose=1, save_best_only=True, mode='auto')
 
         model_final.compile(loss='mse', optimizer='adam')
-        model_final.fit([data_mut[id_train], data_exp[id_train], data_cna[id_train],
+        hs = model_final.fit([data_mut[id_train], data_exp[id_train], data_cna[id_train],
                          data_fprint[id_train]], data_dep[id_train], nb_epoch=30,
                     validation_split=2/9, batch_size=batch_size, shuffle=True, callbacks=[history, checkpoint])
         cost_testing = model_final.evaluate([data_mut[id_test], data_exp[id_test], data_cna[id_test],
@@ -265,12 +264,11 @@ def mut_exp_cna_model(data_mut, data_exp, data_cna,
                                         batch_size=batch_size)
         print("\n\nMut_Exp_CNA-DeepDEP model training completed in %.1f mins.\nloss:%.4f valloss:%.4f testloss:%.4f" % ((time.time() - t)/60, history.model.model.history.history['loss'][history.stopped_epoch], history.model.model.history.history['val_loss'][history.stopped_epoch], cost_testing))
         
-        return model_final, history   
+        return model_final, hs   
     
     
 def mut_exp_model(data_mut, data_exp, data_fprint, data_dep, id_train, id_test, 
-                  premodel_mut, premodel_exp, premodel_cna, premodel_meth,
-               save_path):
+                  premodel_mut, premodel_exp, save_path):
     t = time.time()
     with tf.device('/cpu:0'):
         model_mut = models.Sequential()
@@ -299,7 +297,7 @@ def mut_exp_model(data_mut, data_exp, data_fprint, data_dep, id_train, id_test,
 
         # prediction network
         model_final = models.Sequential()
-        model_final.add(Merge([model_mut, model_exp, model_cna, model_gene], mode='concat'))
+        model_final.add(Merge([model_mut, model_exp, model_gene], mode='concat'))
         model_final.add(Dense(output_dim=dense_layer_dim, input_dim=150, activation=activation_func, init=init,
                               trainable=True))
         model_final.add(Dense(output_dim=dense_layer_dim, input_dim=dense_layer_dim, activation=activation_func, init=init,
@@ -313,13 +311,13 @@ def mut_exp_model(data_mut, data_exp, data_fprint, data_dep, id_train, id_test,
         checkpoint = ModelCheckpoint(filepath, monitor='val_loss', verbose=1, save_best_only=True, mode='auto')
 
         model_final.compile(loss='mse', optimizer='adam')
-        model_final.fit([data_mut[id_train], data_exp[id_train], data_fprint[id_train]], data_dep[id_train], nb_epoch=30,
+        hs = model_final.fit([data_mut[id_train], data_exp[id_train], data_fprint[id_train]], data_dep[id_train], nb_epoch=30,
                     validation_split=2/9, batch_size=batch_size, shuffle=True, callbacks=[history, checkpoint])
         cost_testing = model_final.evaluate([data_mut[id_test], data_exp[id_test], data_fprint[id_test]], data_dep[id_test], verbose=0,
                                         batch_size=batch_size)
         print("\n\nMut_Exp-DeepDEP model training completed in %.1f mins.\nloss:%.4f valloss:%.4f testloss:%.4f" % ((time.time() - t)/60, history.model.model.history.history['loss'][history.stopped_epoch], history.model.model.history.history['val_loss'][history.stopped_epoch], cost_testing))
         
-        return model_final, history   
+        return model_final, hs   
 
 
 def exp_model(data_exp, data_fprint, data_dep, id_train, id_test, premodel_exp):
@@ -350,15 +348,16 @@ def exp_model(data_exp, data_fprint, data_dep, id_train, id_test, premodel_exp):
         checkpoint = ModelCheckpoint(filepath, monitor='val_loss', verbose=1, save_best_only=True, mode='auto')
 
         model_final.compile(loss='mse', optimizer='adam')
-        model_final.fit([data_exp[id_train], data_fprint[id_train]], data_dep[id_train], nb_epoch=30,
+        hs = model_final.fit([data_exp[id_train], data_fprint[id_train]], data_dep[id_train], nb_epoch=30,
                     validation_split=2/9, batch_size=batch_size, shuffle=True, callbacks=[history, checkpoint])
         cost_testing = model_final.evaluate([data_exp[id_test], data_fprint[id_test]], data_dep[id_test], verbose=0,
                                         batch_size=batch_size)
         print("\n\nExp-DeepDEP model training completed in %.1f mins.\nloss:%.4f valloss:%.4f testloss:%.4f" % ((time.time() - t)/60, history.model.model.history.history['loss'][history.stopped_epoch], history.model.model.history.history['val_loss'][history.stopped_epoch], cost_testing))
         
-        return model_final, history     
+        return model_final, hs     
     
 def mut_model(data_mut, data_fprint, data_dep, id_train, id_test, premodel_mut):
+    t = time.time()
     with tf.device('/cpu:0'):
         model_mut = models.Sequential()
         model_mut.add(Dense(output_dim=1000, input_dim=premodel_mut[0][0].shape[0], activation=activation_func,
@@ -384,15 +383,16 @@ def mut_model(data_mut, data_fprint, data_dep, id_train, id_test, premodel_mut):
         filepath=save_path + "exp_weights.best.hdf5"
         checkpoint = ModelCheckpoint(filepath, monitor='val_loss', verbose=1, save_best_only=True, mode='auto')
         model_final.compile(loss='mse', optimizer='adam')
-        model_final.fit([data_mut[id_train], data_fprint[id_train]], data_dep[id_train], nb_epoch=30,
+        hs = model_final.fit([data_mut[id_train], data_fprint[id_train]], data_dep[id_train], nb_epoch=30,
                     validation_split=2/9, batch_size=batch_size, shuffle=True, callbacks=[history])
         cost_testing = model_final.evaluate([data_mut[id_test], data_fprint[id_test]], data_dep[id_test], verbose=0,
                                         batch_size=batch_size)
         print("\n\nMut-DeepDEP model training completed in %.1f mins.\nloss:%.4f valloss:%.4f testloss:%.4f" % ((time.time() - t)/60, history.model.model.history.history['loss'][history.stopped_epoch], history.model.model.history.history['val_loss'][history.stopped_epoch], cost_testing))
         
-        return model_final, history
+        return model_final, hs
 
 def meth_model(data_meth, data_fprint, data_dep, id_train, id_test, premodel_meth):
+    t = time.time()
     with tf.device('/cpu:0'):
         model_meth = models.Sequential()
         model_meth.add(Dense(output_dim=500, input_dim=premodel_meth[0][0].shape[0], activation=activation_func,
@@ -418,17 +418,18 @@ def meth_model(data_meth, data_fprint, data_dep, id_train, id_test, premodel_met
         filepath=save_path + "meth_weights.best.hdf5"
         checkpoint = ModelCheckpoint(filepath, monitor='val_loss', verbose=1, save_best_only=True, mode='auto')
         model_final.compile(loss='mse', optimizer='adam')
-        model_final.fit([data_meth[id_train], data_fprint[id_train]], data_dep[id_train], nb_epoch=30,
+        hs = model_final.fit([data_meth[id_train], data_fprint[id_train]], data_dep[id_train], nb_epoch=30,
                     validation_split=2/9, batch_size=batch_size, shuffle=True, callbacks=[history, checkpoint])
         cost_testing = model_final.evaluate([data_meth[id_test], data_fprint[id_test]], data_dep[id_test], verbose=0,
                                         batch_size=batch_size)
         print("\n\nMeth-DeepDEP model training completed in %.1f mins.\nloss:%.4f valloss:%.4f testloss:%.4f" % ((time.time() - t)/60, history.model.model.history.history['loss'][history.stopped_epoch], history.model.model.history.history['val_loss'][history.stopped_epoch], cost_testing))
         
-        return model_final, history
+        return model_final, hs
 
     
     
 def cna_model(data_cna, data_fprint, data_dep, id_train, id_test, premodel_cna):
+    t = time.time()
     with tf.device('/cpu:0'):
         model_cna = models.Sequential()
         model_cna.add(Dense(output_dim=500, input_dim=premodel_cna[0][0].shape[0], activation=activation_func,
@@ -454,13 +455,13 @@ def cna_model(data_cna, data_fprint, data_dep, id_train, id_test, premodel_cna):
         filepath=save_path + "cna_weights.best.hdf5"
         checkpoint = ModelCheckpoint(filepath, monitor='val_loss', verbose=1, save_best_only=True, mode='auto')
         model_final.compile(loss='mse', optimizer='adam')
-        model_final.fit([data_cna[id_train], data_fprint[id_train]], data_dep[id_train], nb_epoch=30,
+        hs = model_final.fit([data_cna[id_train], data_fprint[id_train]], data_dep[id_train], nb_epoch=30,
                     validation_split=2/9, batch_size=batch_size, shuffle=True, callbacks=[history, checkpoint])
         cost_testing = model_final.evaluate([data_cna[id_test], data_fprint[id_test]], data_dep[id_test], verbose=0,
                                         batch_size=batch_size)
         print("\n\nCNA-DeepDEP model training completed in %.1f mins.\nloss:%.4f valloss:%.4f testloss:%.4f" % ((time.time() - t)/60, history.model.model.history.history['loss'][history.stopped_epoch], history.model.model.history.history['val_loss'][history.stopped_epoch], cost_testing))
         
-        return model_final, history
+        return model_final, hs
 
 
 
@@ -538,20 +539,12 @@ def coeff_determination(y_true, y_pred):
     return ( 1 - SS_res/(SS_tot + K.epsilon()) )
 
 def model_train_vis(history):
-    coeff = history.history['coeff_determination']
-    val_coeff = history.history['val_coeff_determination']
     loss = history.history['loss']
     val_loss = history.history['val_loss']
-    epochs = range(len(coeff))
-    
-    plt.plot(epochs, coeff, 'bo', label='Training')
-    plt.plot(epochs, val_coeff, 'b', label='Validation')
-    plt.title('Training and validation Coeff determination(R-squared)')
-    plt.legend()
 
     plt.figure()
-    plt.plot(epochs, loss, 'bo', label='Training')
-    plt.plot(epochs, val_loss, 'b', label='Validation')
+    plt.plot(loss, 'bo', label='Training')
+    plt.plot(val_loss, 'b', label='Validation')
     plt.title('Training and validation loss(MSE)')
     plt.legend()
 
