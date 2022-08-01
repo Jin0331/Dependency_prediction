@@ -565,11 +565,11 @@ ccle_preprocessing <- function(save_path = ".",
 }
 
 # prediction
-ccle_omics_extraction <- function(ccls, CCCLE_SAMPLE_INFO = "/home/wmbio/WORK/gitworking/DeepDEP/preprocessing/RAW/CCLs/sample_info.csv",
-                                  CCLE_EXP_PATH = "/home/wmbio/WORK/gitworking/DeepDEP/preprocessing/RAW/CCLs/CCLE_expression.csv",
-                                  CCLE_MUT_PATH = "/home/wmbio/WORK/gitworking/DeepDEP/preprocessing/RAW/CCLs/CCLE_mutations.csv",
-                                  CCLE_METH_PATH = "/home/wmbio/WORK/gitworking/DeepDEP/preprocessing/RAW/CCLs/CCLs_methylation_GSE68379.Rds",
-                                  CCLE_CNA_PATH = "/home/wmbio/WORK/gitworking/DeepDEP/preprocessing/RAW/CCLs/CCLE_segment_cn.csv",
+ccle_omics_extraction <- function(ccls, CCLE_SAMPLE_INFO = "/home/wmbio/WORK/gitworking/Dependency_prediction/preprocessing/RAW/CCLs/sample_info.csv",
+                                  CCLE_EXP_PATH = "/home/wmbio/WORK/gitworking/Dependency_prediction/preprocessing/RAW/CCLs/CCLE_expression.csv",
+                                  CCLE_MUT_PATH = "/home/wmbio/WORK/gitworking/Dependency_prediction/preprocessing/RAW/CCLs/CCLE_mutations.csv",
+                                  CCLE_METH_PATH = "/home/wmbio/WORK/gitworking/Dependency_prediction/preprocessing/RAW/CCLs/CCLs_methylation_GSE68379.Rds",
+                                  CCLE_CNA_PATH = "/home/wmbio/WORK/gitworking/Dependency_prediction/preprocessing/RAW/CCLs/CCLE_segment_cn.csv",
                                   save_path = "."){
   
   # sample information
