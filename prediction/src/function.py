@@ -4,12 +4,14 @@ import pickle
 from tqdm import tqdm
 import pandas as pd
 import datatable as dt
+import datetime
 import numpy as np
 import time
 import pandas as pd
 import datatable as dt
 import matplotlib.pyplot as plt
 import gc
+from pathlib import Path
 
 import tensorflow as tf
 import pickle
@@ -59,40 +61,44 @@ def load_data_prediction(filename):
 
 
 def trainset_load(npz_path="prediction/data/ccl_complete_data_501CCL_1298DepOI_614727samples.npz", 
-                  filename="training_custom"):
+                  filename="training_custom", mut=True, exp=True, cna=True, meth=True):
     
     if exists(npz_path) is False:
         # expression
-        if exists(TEMP_PATH + filename + "_exp_training.npy") is False:
-            data_exp, sample_names_exp, property_names_exp = load_data(TRAIN_PATH + filename + "_exp_training.txt")
-            np.save(TEMP_PATH + filename + "_exp_training.npy", data_exp)
-        else:
-            data_exp = np.load(TEMP_PATH + filename + "_exp_training.npy")
-        print("exp load.. completed")    
+        if exp:
+            if exists(TEMP_PATH + filename + "_exp_training.npy") is False:
+                data_exp, sample_names_exp, property_names_exp = load_data(TRAIN_PATH + filename + "_exp_training.txt")
+                np.save(TEMP_PATH + filename + "_exp_training.npy", data_exp)
+            else:
+                data_exp = np.load(TEMP_PATH + filename + "_exp_training.npy")
+            print("exp load.. completed")    
 
         # mutation
-        if exists(TEMP_PATH + filename + "_mut_training.npy") is False:
-            data_mut, sample_names_mut, property_names_mut = load_data(TRAIN_PATH + filename + "_mut_training.txt")
-            np.save(TEMP_PATH + filename + "_mut_training.npy", data_mut)
-        else:
-            data_mut = np.load(TEMP_PATH + filename + "_mut_training.npy")
-        print("mut load.. completed")
+        if mut:
+            if exists(TEMP_PATH + filename + "_mut_training.npy") is False:
+                data_mut, sample_names_mut, property_names_mut = load_data(TRAIN_PATH + filename + "_mut_training.txt")
+                np.save(TEMP_PATH + filename + "_mut_training.npy", data_mut)
+            else:
+                data_mut = np.load(TEMP_PATH + filename + "_mut_training.npy")
+            print("mut load.. completed")
 
         # copy number alteration
-        if exists(TEMP_PATH + filename + "_cna_training.npy") is False:
-            data_cna, sample_names_cna, property_names_cna = load_data(TRAIN_PATH + filename + "_cna_training.txt")
-            np.save(TEMP_PATH + filename + "_cna_training.npy", data_cna)
-        else:
-            data_cna = np.load(TEMP_PATH + filename + "_cna_training.npy")
-        print("cna load.. completed")
+        if cna:
+            if exists(TEMP_PATH + filename + "_cna_training.npy") is False:
+                data_cna, sample_names_cna, property_names_cna = load_data(TRAIN_PATH + filename + "_cna_training.txt")
+                np.save(TEMP_PATH + filename + "_cna_training.npy", data_cna)
+            else:
+                data_cna = np.load(TEMP_PATH + filename + "_cna_training.npy")
+            print("cna load.. completed")
 
         # methylation
-        if exists(TEMP_PATH + filename + "_meth_training.npy") is False:
-            data_meth, sample_names_meth, property_names_meth = load_data(TRAIN_PATH + filename + "_meth_training.txt")
-            np.save(TEMP_PATH + filename + "_meth_training.npy", data_meth)
-        else:
-            data_meth = np.load(TEMP_PATH + filename + "_meth_training.npy")
-        print("meth load.. completed")
+        if meth:
+            if exists(TEMP_PATH + filename + "_meth_training.npy") is False:
+                data_meth, sample_names_meth, property_names_meth = load_data(TRAIN_PATH + filename + "_meth_training.txt")
+                np.save(TEMP_PATH + filename + "_meth_training.npy", data_meth)
+            else:
+                data_meth = np.load(TEMP_PATH + filename + "_meth_training.npy")
+            print("meth load.. completed")
 
         # dependency score
         if exists(TEMP_PATH + filename + "_DepScore_training.npy") is False:
@@ -133,62 +139,66 @@ def full_model(data_mut, data_exp, data_cna, data_meth,
                premodel_mut, premodel_exp, premodel_cna, premodel_meth,
                save_path):
     t = time.time()
+    filepath=save_path + "full_weights.best.hdf5"
+    
     with tf.device('/cpu:0'):
-        model_mut = models.Sequential()
-        model_mut.add(Dense(output_dim=1000, input_dim=premodel_mut[0][0].shape[0], activation=activation_func,
-                            weights=premodel_mut[0], trainable=True))
-        model_mut.add(Dense(output_dim=100, input_dim=1000, activation=activation_func, weights=premodel_mut[1],
-                            trainable=True))
-        model_mut.add(Dense(output_dim=50, input_dim=100, activation=activation_func, weights=premodel_mut[2],
-                            trainable=True))
+        if exists(filepath) is False:
+            model_mut = models.Sequential()
+            model_mut.add(Dense(output_dim=1000, input_dim=premodel_mut[0][0].shape[0], activation=activation_func,
+                                weights=premodel_mut[0], trainable=True))
+            model_mut.add(Dense(output_dim=100, input_dim=1000, activation=activation_func, weights=premodel_mut[1],
+                                trainable=True))
+            model_mut.add(Dense(output_dim=50, input_dim=100, activation=activation_func, weights=premodel_mut[2],
+                                trainable=True))
 
-        # subnetwork of expression
-        model_exp = models.Sequential()
-        model_exp.add(Dense(output_dim=500, input_dim=premodel_exp[0][0].shape[0], activation=activation_func,
-                            weights=premodel_exp[0], trainable=True))
-        model_exp.add(Dense(output_dim=200, input_dim=500, activation=activation_func, weights=premodel_exp[1],
-                            trainable=True))
-        model_exp.add(Dense(output_dim=50, input_dim=200, activation=activation_func, weights=premodel_exp[2],
-                            trainable=True))
+            # subnetwork of expression
+            model_exp = models.Sequential()
+            model_exp.add(Dense(output_dim=500, input_dim=premodel_exp[0][0].shape[0], activation=activation_func,
+                                weights=premodel_exp[0], trainable=True))
+            model_exp.add(Dense(output_dim=200, input_dim=500, activation=activation_func, weights=premodel_exp[1],
+                                trainable=True))
+            model_exp.add(Dense(output_dim=50, input_dim=200, activation=activation_func, weights=premodel_exp[2],
+                                trainable=True))
 
-        # subnetwork of copy number alterations
-        model_cna = models.Sequential()
-        model_cna.add(Dense(output_dim=500, input_dim=premodel_cna[0][0].shape[0], activation=activation_func,
-                            weights=premodel_cna[0], trainable=True))
-        model_cna.add(Dense(output_dim=200, input_dim=500, activation=activation_func, weights=premodel_cna[1],
-                            trainable=True))
-        model_cna.add(Dense(output_dim=50, input_dim=200, activation=activation_func, weights=premodel_cna[2],
-                            trainable=True))
+            # subnetwork of copy number alterations
+            model_cna = models.Sequential()
+            model_cna.add(Dense(output_dim=500, input_dim=premodel_cna[0][0].shape[0], activation=activation_func,
+                                weights=premodel_cna[0], trainable=True))
+            model_cna.add(Dense(output_dim=200, input_dim=500, activation=activation_func, weights=premodel_cna[1],
+                                trainable=True))
+            model_cna.add(Dense(output_dim=50, input_dim=200, activation=activation_func, weights=premodel_cna[2],
+                                trainable=True))
 
-        # subnetwork of DNA methylations
-        model_meth = models.Sequential()
-        model_meth.add(Dense(output_dim=500, input_dim=premodel_meth[0][0].shape[0], activation=activation_func,
-                             weights=premodel_meth[0], trainable=True))
-        model_meth.add(Dense(output_dim=200, input_dim=500, activation=activation_func, weights=premodel_meth[1],
-                             trainable=True))
-        model_meth.add(Dense(output_dim=50, input_dim=200, activation=activation_func, weights=premodel_meth[2],
-                             trainable=True))
+            # subnetwork of DNA methylations
+            model_meth = models.Sequential()
+            model_meth.add(Dense(output_dim=500, input_dim=premodel_meth[0][0].shape[0], activation=activation_func,
+                                 weights=premodel_meth[0], trainable=True))
+            model_meth.add(Dense(output_dim=200, input_dim=500, activation=activation_func, weights=premodel_meth[1],
+                                 trainable=True))
+            model_meth.add(Dense(output_dim=50, input_dim=200, activation=activation_func, weights=premodel_meth[2],
+                                 trainable=True))
 
-        # subnetwork of gene fingerprints
-        model_gene = models.Sequential()
-        model_gene.add(Dense(output_dim=1000, input_dim=data_fprint.shape[1], activation=activation_func, init=init,
-                             trainable=True))
-        model_gene.add(Dense(output_dim=100, input_dim=1000, activation=activation_func, init=init, trainable=True))
-        model_gene.add(Dense(output_dim=50, input_dim=100, activation=activation_func, init=init, trainable=True))
+            # subnetwork of gene fingerprints
+            model_gene = models.Sequential()
+            model_gene.add(Dense(output_dim=1000, input_dim=data_fprint.shape[1], activation=activation_func, init=init,
+                                 trainable=True))
+            model_gene.add(Dense(output_dim=100, input_dim=1000, activation=activation_func, init=init, trainable=True))
+            model_gene.add(Dense(output_dim=50, input_dim=100, activation=activation_func, init=init, trainable=True))
 
-        # prediction network
-        model_final = models.Sequential()
-        model_final.add(Merge([model_mut, model_exp, model_cna, model_meth, model_gene], mode='concat'))
-        model_final.add(Dense(output_dim=dense_layer_dim, input_dim=250, activation=activation_func, init=init,
-                              trainable=True))
-        model_final.add(Dense(output_dim=dense_layer_dim, input_dim=dense_layer_dim, activation=activation_func, init=init,
-                              trainable=True))
-        model_final.add(Dense(output_dim=1, input_dim=dense_layer_dim, activation=activation_func2, init=init,
-                              trainable=True))
-        
-        # callback
-        history = EarlyStopping(monitor='val_loss', min_delta=0, patience=3, verbose=1, mode='min') # early stopping
-        filepath=save_path + "full_weights.best.hdf5"
+            # prediction network
+            model_final = models.Sequential()
+            model_final.add(Merge([model_mut, model_exp, model_cna, model_meth, model_gene], mode='concat'))
+            model_final.add(Dense(output_dim=dense_layer_dim, input_dim=250, activation=activation_func, init=init,
+                                  trainable=True))
+            model_final.add(Dense(output_dim=dense_layer_dim, input_dim=dense_layer_dim, activation=activation_func, init=init,
+                                  trainable=True))
+            model_final.add(Dense(output_dim=1, input_dim=dense_layer_dim, activation=activation_func2, init=init,
+                                  trainable=True))
+        else :
+            model_final = models.load_model(filepath)
+            
+        # callback list
+        history = EarlyStopping(monitor='val_loss', min_delta=0, patience=3, verbose=1, mode='min') # early stopping       
         checkpoint = ModelCheckpoint(filepath, monitor='val_loss', verbose=1, save_best_only=True, mode='auto')
 
         model_final.compile(loss='mse', optimizer='adam')
@@ -206,53 +216,57 @@ def mut_exp_cna_model(data_mut, data_exp, data_cna,
                premodel_mut, premodel_exp, premodel_cna,
                save_path):
     t = time.time()
+    filepath=save_path + "mut_exp_cna_weights.best.hdf5"
+    
     with tf.device('/cpu:0'):
-        model_mut = models.Sequential()
-        model_mut.add(Dense(output_dim=1000, input_dim=premodel_mut[0][0].shape[0], activation=activation_func,
-                            weights=premodel_mut[0], trainable=True))
-        model_mut.add(Dense(output_dim=100, input_dim=1000, activation=activation_func, weights=premodel_mut[1],
-                            trainable=True))
-        model_mut.add(Dense(output_dim=50, input_dim=100, activation=activation_func, weights=premodel_mut[2],
-                            trainable=True))
+        if exists(filepath) is False:        
+            model_mut = models.Sequential()
+            model_mut.add(Dense(output_dim=1000, input_dim=premodel_mut[0][0].shape[0], activation=activation_func,
+                                weights=premodel_mut[0], trainable=True))
+            model_mut.add(Dense(output_dim=100, input_dim=1000, activation=activation_func, weights=premodel_mut[1],
+                                trainable=True))
+            model_mut.add(Dense(output_dim=50, input_dim=100, activation=activation_func, weights=premodel_mut[2],
+                                trainable=True))
 
-        # subnetwork of expression
-        model_exp = models.Sequential()
-        model_exp.add(Dense(output_dim=500, input_dim=premodel_exp[0][0].shape[0], activation=activation_func,
-                            weights=premodel_exp[0], trainable=True))
-        model_exp.add(Dense(output_dim=200, input_dim=500, activation=activation_func, weights=premodel_exp[1],
-                            trainable=True))
-        model_exp.add(Dense(output_dim=50, input_dim=200, activation=activation_func, weights=premodel_exp[2],
-                            trainable=True))
+            # subnetwork of expression
+            model_exp = models.Sequential()
+            model_exp.add(Dense(output_dim=500, input_dim=premodel_exp[0][0].shape[0], activation=activation_func,
+                                weights=premodel_exp[0], trainable=True))
+            model_exp.add(Dense(output_dim=200, input_dim=500, activation=activation_func, weights=premodel_exp[1],
+                                trainable=True))
+            model_exp.add(Dense(output_dim=50, input_dim=200, activation=activation_func, weights=premodel_exp[2],
+                                trainable=True))
 
-        # subnetwork of copy number alterations
-        model_cna = models.Sequential()
-        model_cna.add(Dense(output_dim=500, input_dim=premodel_cna[0][0].shape[0], activation=activation_func,
-                            weights=premodel_cna[0], trainable=True))
-        model_cna.add(Dense(output_dim=200, input_dim=500, activation=activation_func, weights=premodel_cna[1],
-                            trainable=True))
-        model_cna.add(Dense(output_dim=50, input_dim=200, activation=activation_func, weights=premodel_cna[2],
-                            trainable=True))
+            # subnetwork of copy number alterations
+            model_cna = models.Sequential()
+            model_cna.add(Dense(output_dim=500, input_dim=premodel_cna[0][0].shape[0], activation=activation_func,
+                                weights=premodel_cna[0], trainable=True))
+            model_cna.add(Dense(output_dim=200, input_dim=500, activation=activation_func, weights=premodel_cna[1],
+                                trainable=True))
+            model_cna.add(Dense(output_dim=50, input_dim=200, activation=activation_func, weights=premodel_cna[2],
+                                trainable=True))
 
-        # subnetwork of gene fingerprints
-        model_gene = models.Sequential()
-        model_gene.add(Dense(output_dim=1000, input_dim=data_fprint.shape[1], activation=activation_func, init=init,
-                             trainable=True))
-        model_gene.add(Dense(output_dim=100, input_dim=1000, activation=activation_func, init=init, trainable=True))
-        model_gene.add(Dense(output_dim=50, input_dim=100, activation=activation_func, init=init, trainable=True))
+            # subnetwork of gene fingerprints
+            model_gene = models.Sequential()
+            model_gene.add(Dense(output_dim=1000, input_dim=data_fprint.shape[1], activation=activation_func, init=init,
+                                 trainable=True))
+            model_gene.add(Dense(output_dim=100, input_dim=1000, activation=activation_func, init=init, trainable=True))
+            model_gene.add(Dense(output_dim=50, input_dim=100, activation=activation_func, init=init, trainable=True))
 
-        # prediction network
-        model_final = models.Sequential()
-        model_final.add(Merge([model_mut, model_exp, model_cna, model_gene], mode='concat'))
-        model_final.add(Dense(output_dim=dense_layer_dim, input_dim=200, activation=activation_func, init=init,
-                              trainable=True))
-        model_final.add(Dense(output_dim=dense_layer_dim, input_dim=dense_layer_dim, activation=activation_func, init=init,
-                              trainable=True))
-        model_final.add(Dense(output_dim=1, input_dim=dense_layer_dim, activation=activation_func2, init=init,
-                              trainable=True))
-        
+            # prediction network
+            model_final = models.Sequential()
+            model_final.add(Merge([model_mut, model_exp, model_cna, model_gene], mode='concat'))
+            model_final.add(Dense(output_dim=dense_layer_dim, input_dim=200, activation=activation_func, init=init,
+                                  trainable=True))
+            model_final.add(Dense(output_dim=dense_layer_dim, input_dim=dense_layer_dim, activation=activation_func, init=init,
+                                  trainable=True))
+            model_final.add(Dense(output_dim=1, input_dim=dense_layer_dim, activation=activation_func2, init=init,
+                                  trainable=True))
+        else :
+            model_final = models.load_model(filepath)
+            
         # callback
         history = EarlyStopping(monitor='val_loss', min_delta=0, patience=3, verbose=1, mode='min') # early stopping
-        filepath=save_path + "mut_exp_cna_weights.best.hdf5"
         checkpoint = ModelCheckpoint(filepath, monitor='val_loss', verbose=1, save_best_only=True, mode='auto')
 
         model_final.compile(loss='mse', optimizer='adam')
@@ -265,49 +279,123 @@ def mut_exp_cna_model(data_mut, data_exp, data_cna,
         print("\n\nMut_Exp_CNA-DeepDEP model training completed in %.1f mins.\nloss:%.4f valloss:%.4f testloss:%.4f" % ((time.time() - t)/60, history.model.model.history.history['loss'][history.stopped_epoch], history.model.model.history.history['val_loss'][history.stopped_epoch], cost_testing))
         
         return model_final, hs   
+
+def mut_exp_meth_model(data_mut, data_exp, data_meth, 
+               data_fprint, data_dep, id_train, id_test, 
+               premodel_mut, premodel_exp, premodel_meth,
+               save_path):
+    t = time.time()
+    filepath=save_path + "mut_exp_meth_weights.best.hdf5"
     
+    with tf.device('/cpu:0'):
+        if exists(filepath) is False:
+            model_mut = models.Sequential()
+            model_mut.add(Dense(output_dim=1000, input_dim=premodel_mut[0][0].shape[0], activation=activation_func,
+                                weights=premodel_mut[0], trainable=True))
+            model_mut.add(Dense(output_dim=100, input_dim=1000, activation=activation_func, weights=premodel_mut[1],
+                                trainable=True))
+            model_mut.add(Dense(output_dim=50, input_dim=100, activation=activation_func, weights=premodel_mut[2],
+                                trainable=True))
+
+            # subnetwork of expression
+            model_exp = models.Sequential()
+            model_exp.add(Dense(output_dim=500, input_dim=premodel_exp[0][0].shape[0], activation=activation_func,
+                                weights=premodel_exp[0], trainable=True))
+            model_exp.add(Dense(output_dim=200, input_dim=500, activation=activation_func, weights=premodel_exp[1],
+                                trainable=True))
+            model_exp.add(Dense(output_dim=50, input_dim=200, activation=activation_func, weights=premodel_exp[2],
+                                trainable=True))
+
+            # subnetwork of DNA methylations
+            model_meth = models.Sequential()
+            model_meth.add(Dense(output_dim=500, input_dim=premodel_meth[0][0].shape[0], activation=activation_func,
+                                 weights=premodel_meth[0], trainable=True))
+            model_meth.add(Dense(output_dim=200, input_dim=500, activation=activation_func, weights=premodel_meth[1],
+                                 trainable=True))
+            model_meth.add(Dense(output_dim=50, input_dim=200, activation=activation_func, weights=premodel_meth[2],
+                                 trainable=True))
+
+            # subnetwork of gene fingerprints
+            model_gene = models.Sequential()
+            model_gene.add(Dense(output_dim=1000, input_dim=data_fprint.shape[1], activation=activation_func, init=init,
+                                 trainable=True))
+            model_gene.add(Dense(output_dim=100, input_dim=1000, activation=activation_func, init=init, trainable=True))
+            model_gene.add(Dense(output_dim=50, input_dim=100, activation=activation_func, init=init, trainable=True))
+
+            # prediction network
+            model_final = models.Sequential()
+            model_final.add(Merge([model_mut, model_exp, model_meth, model_gene], mode='concat'))
+            model_final.add(Dense(output_dim=dense_layer_dim, input_dim=200, activation=activation_func, init=init,
+                                  trainable=True))
+            model_final.add(Dense(output_dim=dense_layer_dim, input_dim=dense_layer_dim, activation=activation_func, init=init,
+                                  trainable=True))
+            model_final.add(Dense(output_dim=1, input_dim=dense_layer_dim, activation=activation_func2, init=init,
+                                  trainable=True))
+        else :
+            model_final = models.load_model(filepath)
+            
+        # callback list
+        history = EarlyStopping(monitor='val_loss', min_delta=0, patience=3, verbose=1, mode='min') # early stopping
+        checkpoint = ModelCheckpoint(filepath, monitor='val_loss', verbose=1, save_best_only=True, mode='auto')
+
+        model_final.compile(loss='mse', optimizer='adam')
+        hs = model_final.fit([data_mut[id_train], data_exp[id_train], data_meth[id_train],
+                         data_fprint[id_train]], data_dep[id_train], nb_epoch=30,
+                    validation_split=2/9, batch_size=batch_size, shuffle=True, callbacks=[history, checkpoint])
+        cost_testing = model_final.evaluate([data_mut[id_test], data_exp[id_test], data_meth[id_test],
+                         data_fprint[id_test]], data_dep[id_test], verbose=0,
+                                        batch_size=batch_size)
+        print("\n\nMut_Exp_Meth-DeepDEP model training completed in %.1f mins.\nloss:%.4f valloss:%.4f testloss:%.4f" % ((time.time() - t)/60, history.model.model.history.history['loss'][history.stopped_epoch], history.model.model.history.history['val_loss'][history.stopped_epoch], cost_testing))
+        
+        return model_final, hs   
+    
+
     
 def mut_exp_model(data_mut, data_exp, data_fprint, data_dep, id_train, id_test, 
                   premodel_mut, premodel_exp, save_path):
     t = time.time()
+    filepath=save_path + "mut_exp_weights.best.hdf5"
+    
     with tf.device('/cpu:0'):
-        model_mut = models.Sequential()
-        model_mut.add(Dense(output_dim=1000, input_dim=premodel_mut[0][0].shape[0], activation=activation_func,
-                            weights=premodel_mut[0], trainable=True))
-        model_mut.add(Dense(output_dim=100, input_dim=1000, activation=activation_func, weights=premodel_mut[1],
-                            trainable=True))
-        model_mut.add(Dense(output_dim=50, input_dim=100, activation=activation_func, weights=premodel_mut[2],
-                            trainable=True))
+        if exists(filepath) is False:
+            model_mut = models.Sequential()
+            model_mut.add(Dense(output_dim=1000, input_dim=premodel_mut[0][0].shape[0], activation=activation_func,
+                                weights=premodel_mut[0], trainable=True))
+            model_mut.add(Dense(output_dim=100, input_dim=1000, activation=activation_func, weights=premodel_mut[1],
+                                trainable=True))
+            model_mut.add(Dense(output_dim=50, input_dim=100, activation=activation_func, weights=premodel_mut[2],
+                                trainable=True))
 
-        # subnetwork of expression
-        model_exp = models.Sequential()
-        model_exp.add(Dense(output_dim=500, input_dim=premodel_exp[0][0].shape[0], activation=activation_func,
-                            weights=premodel_exp[0], trainable=True))
-        model_exp.add(Dense(output_dim=200, input_dim=500, activation=activation_func, weights=premodel_exp[1],
-                            trainable=True))
-        model_exp.add(Dense(output_dim=50, input_dim=200, activation=activation_func, weights=premodel_exp[2],
-                            trainable=True))
+            # subnetwork of expression
+            model_exp = models.Sequential()
+            model_exp.add(Dense(output_dim=500, input_dim=premodel_exp[0][0].shape[0], activation=activation_func,
+                                weights=premodel_exp[0], trainable=True))
+            model_exp.add(Dense(output_dim=200, input_dim=500, activation=activation_func, weights=premodel_exp[1],
+                                trainable=True))
+            model_exp.add(Dense(output_dim=50, input_dim=200, activation=activation_func, weights=premodel_exp[2],
+                                trainable=True))
 
-        # subnetwork of gene fingerprints
-        model_gene = models.Sequential()
-        model_gene.add(Dense(output_dim=1000, input_dim=data_fprint.shape[1], activation=activation_func, init=init,
-                             trainable=True))
-        model_gene.add(Dense(output_dim=100, input_dim=1000, activation=activation_func, init=init, trainable=True))
-        model_gene.add(Dense(output_dim=50, input_dim=100, activation=activation_func, init=init, trainable=True))
+            # subnetwork of gene fingerprints
+            model_gene = models.Sequential()
+            model_gene.add(Dense(output_dim=1000, input_dim=data_fprint.shape[1], activation=activation_func, init=init,
+                                 trainable=True))
+            model_gene.add(Dense(output_dim=100, input_dim=1000, activation=activation_func, init=init, trainable=True))
+            model_gene.add(Dense(output_dim=50, input_dim=100, activation=activation_func, init=init, trainable=True))
 
-        # prediction network
-        model_final = models.Sequential()
-        model_final.add(Merge([model_mut, model_exp, model_gene], mode='concat'))
-        model_final.add(Dense(output_dim=dense_layer_dim, input_dim=150, activation=activation_func, init=init,
-                              trainable=True))
-        model_final.add(Dense(output_dim=dense_layer_dim, input_dim=dense_layer_dim, activation=activation_func, init=init,
-                              trainable=True))
-        model_final.add(Dense(output_dim=1, input_dim=dense_layer_dim, activation=activation_func2, init=init,
-                              trainable=True))
-        
+            # prediction network
+            model_final = models.Sequential()
+            model_final.add(Merge([model_mut, model_exp, model_gene], mode='concat'))
+            model_final.add(Dense(output_dim=dense_layer_dim, input_dim=150, activation=activation_func, init=init,
+                                  trainable=True))
+            model_final.add(Dense(output_dim=dense_layer_dim, input_dim=dense_layer_dim, activation=activation_func, init=init,
+                                  trainable=True))
+            model_final.add(Dense(output_dim=1, input_dim=dense_layer_dim, activation=activation_func2, init=init,
+                                  trainable=True))
+        else :
+            model_final = models.load_model(filepath)
+            
         # callback
         history = EarlyStopping(monitor='val_loss', min_delta=0, patience=3, verbose=1, mode='min') # early stopping
-        filepath=save_path + "mut_exp_weights.best.hdf5"
         checkpoint = ModelCheckpoint(filepath, monitor='val_loss', verbose=1, save_best_only=True, mode='auto')
 
         model_final.compile(loss='mse', optimizer='adam')
@@ -322,29 +410,34 @@ def mut_exp_model(data_mut, data_exp, data_fprint, data_dep, id_train, id_test,
 
 def exp_model(data_exp, data_fprint, data_dep, id_train, id_test, premodel_exp, save_path):
     t = time.time()
+    filepath=save_path + "exp_weights.best.hdf5"
+    
     with tf.device('/cpu:0'):
-        model_exp = models.Sequential()
-        model_exp.add(Dense(output_dim=500, input_dim=premodel_exp[0][0].shape[0], activation=activation_func,
-                            weights=premodel_exp[0], trainable=True))
-        model_exp.add(Dense(output_dim=200, input_dim=500, activation=activation_func, weights=premodel_exp[1],
-                            trainable=True))
-        model_exp.add(Dense(output_dim=50, input_dim=200, activation=activation_func, weights=premodel_exp[2],
-                            trainable=True))
+        if exists(filepath) is False:
+            model_exp = models.Sequential()
+            model_exp.add(Dense(output_dim=500, input_dim=premodel_exp[0][0].shape[0], activation=activation_func,
+                                weights=premodel_exp[0], trainable=True))
+            model_exp.add(Dense(output_dim=200, input_dim=500, activation=activation_func, weights=premodel_exp[1],
+                                trainable=True))
+            model_exp.add(Dense(output_dim=50, input_dim=200, activation=activation_func, weights=premodel_exp[2],
+                                trainable=True))
 
-        model_gene = models.Sequential()
-        model_gene.add(Dense(output_dim=1000, input_dim=data_fprint.shape[1], activation=activation_func, init=init,
-                             trainable=True))
-        model_gene.add(Dense(output_dim=100, input_dim=1000, activation=activation_func, init=init, trainable=True))
-        model_gene.add(Dense(output_dim=50, input_dim=100, activation=activation_func, init=init, trainable=True))
+            model_gene = models.Sequential()
+            model_gene.add(Dense(output_dim=1000, input_dim=data_fprint.shape[1], activation=activation_func, init=init,
+                                 trainable=True))
+            model_gene.add(Dense(output_dim=100, input_dim=1000, activation=activation_func, init=init, trainable=True))
+            model_gene.add(Dense(output_dim=50, input_dim=100, activation=activation_func, init=init, trainable=True))
 
-        model_final = models.Sequential()
-        model_final.add(Merge([model_exp, model_gene], mode='concat'))
-        model_final.add(Dense(output_dim=dense_layer_dim, input_dim=100, activation=activation_func, init=init))
-        model_final.add(Dense(output_dim=dense_layer_dim, input_dim=dense_layer_dim, activation=activation_func, init=init))
-        model_final.add(Dense(output_dim=1, input_dim=dense_layer_dim, activation=activation_func2, init=init))
-        
+            model_final = models.Sequential()
+            model_final.add(Merge([model_exp, model_gene], mode='concat'))
+            model_final.add(Dense(output_dim=dense_layer_dim, input_dim=100, activation=activation_func, init=init))
+            model_final.add(Dense(output_dim=dense_layer_dim, input_dim=dense_layer_dim, activation=activation_func, init=init))
+            model_final.add(Dense(output_dim=1, input_dim=dense_layer_dim, activation=activation_func2, init=init))
+        else :
+            model_final = models.load_model(filepath)
+
+        # callback-list
         history = EarlyStopping(monitor='val_loss', min_delta=0, patience=3, verbose=0, mode='min')
-        filepath=save_path + "exp_weights.best.hdf5"
         checkpoint = ModelCheckpoint(filepath, monitor='val_loss', verbose=1, save_best_only=True, mode='auto')
 
         model_final.compile(loss='mse', optimizer='adam')
@@ -358,30 +451,36 @@ def exp_model(data_exp, data_fprint, data_dep, id_train, id_test, premodel_exp, 
     
 def mut_model(data_mut, data_fprint, data_dep, id_train, id_test, premodel_mut, save_path):
     t = time.time()
+    filepath=save_path + "mut_weights.best.hdf5"
+    
     with tf.device('/cpu:0'):
-        model_mut = models.Sequential()
-        model_mut.add(Dense(output_dim=1000, input_dim=premodel_mut[0][0].shape[0], activation=activation_func,
-                            weights=premodel_mut[0], trainable=True))
-        model_mut.add(Dense(output_dim=100, input_dim=1000, activation=activation_func, weights=premodel_mut[1],
-                            trainable=True))
-        model_mut.add(Dense(output_dim=50, input_dim=100, activation=activation_func, weights=premodel_mut[2],
-                            trainable=True))
+        if exists(filepath) is False:
+            model_mut = models.Sequential()
+            model_mut.add(Dense(output_dim=1000, input_dim=premodel_mut[0][0].shape[0], activation=activation_func,
+                                weights=premodel_mut[0], trainable=True))
+            model_mut.add(Dense(output_dim=100, input_dim=1000, activation=activation_func, weights=premodel_mut[1],
+                                trainable=True))
+            model_mut.add(Dense(output_dim=50, input_dim=100, activation=activation_func, weights=premodel_mut[2],
+                                trainable=True))
 
-        model_gene = models.Sequential()
-        model_gene.add(Dense(output_dim=1000, input_dim=data_fprint.shape[1], activation=activation_func, init=init,
-                             trainable=True))
-        model_gene.add(Dense(output_dim=100, input_dim=1000, activation=activation_func, init=init, trainable=True))
-        model_gene.add(Dense(output_dim=50, input_dim=100, activation=activation_func, init=init, trainable=True))
+            model_gene = models.Sequential()
+            model_gene.add(Dense(output_dim=1000, input_dim=data_fprint.shape[1], activation=activation_func, init=init,
+                                 trainable=True))
+            model_gene.add(Dense(output_dim=100, input_dim=1000, activation=activation_func, init=init, trainable=True))
+            model_gene.add(Dense(output_dim=50, input_dim=100, activation=activation_func, init=init, trainable=True))
 
-        model_final = models.Sequential()
-        model_final.add(Merge([model_mut, model_gene], mode='concat'))
-        model_final.add(Dense(output_dim=dense_layer_dim, input_dim=100, activation=activation_func, init=init))
-        model_final.add(Dense(output_dim=dense_layer_dim, input_dim=dense_layer_dim, activation=activation_func, init=init))
-        model_final.add(Dense(output_dim=1, input_dim=dense_layer_dim, activation=activation_func2, init=init))
-
+            model_final = models.Sequential()
+            model_final.add(Merge([model_mut, model_gene], mode='concat'))
+            model_final.add(Dense(output_dim=dense_layer_dim, input_dim=100, activation=activation_func, init=init))
+            model_final.add(Dense(output_dim=dense_layer_dim, input_dim=dense_layer_dim, activation=activation_func, init=init))
+            model_final.add(Dense(output_dim=1, input_dim=dense_layer_dim, activation=activation_func2, init=init))
+        else :
+            model_final = models.load_model(filepath)
+            
+        # callback list
         history = EarlyStopping(monitor='val_loss', min_delta=0, patience=3, verbose=0, mode='min')
-        filepath=save_path + "exp_weights.best.hdf5"
         checkpoint = ModelCheckpoint(filepath, monitor='val_loss', verbose=1, save_best_only=True, mode='auto')
+        
         model_final.compile(loss='mse', optimizer='adam')
         hs = model_final.fit([data_mut[id_train], data_fprint[id_train]], data_dep[id_train], nb_epoch=30,
                     validation_split=2/9, batch_size=batch_size, shuffle=True, callbacks=[history, checkpoint])
@@ -393,29 +492,32 @@ def mut_model(data_mut, data_fprint, data_dep, id_train, id_test, premodel_mut, 
 
 def meth_model(data_meth, data_fprint, data_dep, id_train, id_test, premodel_meth, save_path):
     t = time.time()
+    filepath=save_path + "meth_weights.best.hdf5"
     with tf.device('/cpu:0'):
-        model_meth = models.Sequential()
-        model_meth.add(Dense(output_dim=500, input_dim=premodel_meth[0][0].shape[0], activation=activation_func,
-                             weights=premodel_meth[0], trainable=True))
-        model_meth.add(Dense(output_dim=200, input_dim=500, activation=activation_func, weights=premodel_meth[1],
-                             trainable=True))
-        model_meth.add(Dense(output_dim=50, input_dim=200, activation=activation_func, weights=premodel_meth[2],
-                             trainable=True))
+        if exists(filepath) is False:
+            model_meth = models.Sequential()
+            model_meth.add(Dense(output_dim=500, input_dim=premodel_meth[0][0].shape[0], activation=activation_func,
+                                 weights=premodel_meth[0], trainable=True))
+            model_meth.add(Dense(output_dim=200, input_dim=500, activation=activation_func, weights=premodel_meth[1],
+                                 trainable=True))
+            model_meth.add(Dense(output_dim=50, input_dim=200, activation=activation_func, weights=premodel_meth[2],
+                                 trainable=True))
 
-        model_gene = models.Sequential()
-        model_gene.add(Dense(output_dim=1000, input_dim=data_fprint.shape[1], activation=activation_func, init=init,
-                             trainable=True))
-        model_gene.add(Dense(output_dim=100, input_dim=1000, activation=activation_func, init=init, trainable=True))
-        model_gene.add(Dense(output_dim=50, input_dim=100, activation=activation_func, init=init, trainable=True))
+            model_gene = models.Sequential()
+            model_gene.add(Dense(output_dim=1000, input_dim=data_fprint.shape[1], activation=activation_func, init=init,
+                                 trainable=True))
+            model_gene.add(Dense(output_dim=100, input_dim=1000, activation=activation_func, init=init, trainable=True))
+            model_gene.add(Dense(output_dim=50, input_dim=100, activation=activation_func, init=init, trainable=True))
 
-        model_final = models.Sequential()
-        model_final.add(Merge([model_meth, model_gene], mode='concat'))
-        model_final.add(Dense(output_dim=dense_layer_dim, input_dim=100, activation=activation_func, init=init))
-        model_final.add(Dense(output_dim=dense_layer_dim, input_dim=dense_layer_dim, activation=activation_func, init=init))
-        model_final.add(Dense(output_dim=1, input_dim=dense_layer_dim, activation=activation_func2, init=init))
-        
+            model_final = models.Sequential()
+            model_final.add(Merge([model_meth, model_gene], mode='concat'))
+            model_final.add(Dense(output_dim=dense_layer_dim, input_dim=100, activation=activation_func, init=init))
+            model_final.add(Dense(output_dim=dense_layer_dim, input_dim=dense_layer_dim, activation=activation_func, init=init))
+            model_final.add(Dense(output_dim=1, input_dim=dense_layer_dim, activation=activation_func2, init=init))
+        else :
+            model_final = models.load_model(filepath)
         history = EarlyStopping(monitor='val_loss', min_delta=0, patience=3, verbose=0, mode='min')
-        filepath=save_path + "meth_weights.best.hdf5"
+        
         checkpoint = ModelCheckpoint(filepath, monitor='val_loss', verbose=1, save_best_only=True, mode='auto')
         model_final.compile(loss='mse', optimizer='adam')
         hs = model_final.fit([data_meth[id_train], data_fprint[id_train]], data_dep[id_train], nb_epoch=30,
@@ -427,33 +529,38 @@ def meth_model(data_meth, data_fprint, data_dep, id_train, id_test, premodel_met
         return model_final, hs
 
     
-    
 def cna_model(data_cna, data_fprint, data_dep, id_train, id_test, premodel_cna, save_path):
     t = time.time()
+    filepath=save_path + "cna_weights.best.hdf5"
+    
     with tf.device('/cpu:0'):
-        model_cna = models.Sequential()
-        model_cna.add(Dense(output_dim=500, input_dim=premodel_cna[0][0].shape[0], activation=activation_func,
-                            weights=premodel_cna[0], trainable=True))
-        model_cna.add(Dense(output_dim=200, input_dim=500, activation=activation_func, weights=premodel_cna[1],
-                            trainable=True))
-        model_cna.add(Dense(output_dim=50, input_dim=200, activation=activation_func, weights=premodel_cna[2],
-                            trainable=True))
+        if exists(filepath) is False:
+            model_cna = models.Sequential()
+            model_cna.add(Dense(output_dim=500, input_dim=premodel_cna[0][0].shape[0], activation=activation_func,
+                                weights=premodel_cna[0], trainable=True))
+            model_cna.add(Dense(output_dim=200, input_dim=500, activation=activation_func, weights=premodel_cna[1],
+                                trainable=True))
+            model_cna.add(Dense(output_dim=50, input_dim=200, activation=activation_func, weights=premodel_cna[2],
+                                trainable=True))
 
-        model_gene = models.Sequential()
-        model_gene.add(Dense(output_dim=1000, input_dim=data_fprint.shape[1], activation=activation_func, init=init,
-                             trainable=True))
-        model_gene.add(Dense(output_dim=100, input_dim=1000, activation=activation_func, init=init, trainable=True))
-        model_gene.add(Dense(output_dim=50, input_dim=100, activation=activation_func, init=init, trainable=True))
+            model_gene = models.Sequential()
+            model_gene.add(Dense(output_dim=1000, input_dim=data_fprint.shape[1], activation=activation_func, init=init,
+                                 trainable=True))
+            model_gene.add(Dense(output_dim=100, input_dim=1000, activation=activation_func, init=init, trainable=True))
+            model_gene.add(Dense(output_dim=50, input_dim=100, activation=activation_func, init=init, trainable=True))
 
-        model_final = models.Sequential()
-        model_final.add(Merge([model_cna, model_gene], mode='concat'))
-        model_final.add(Dense(output_dim=dense_layer_dim, input_dim=100, activation=activation_func, init=init))
-        model_final.add(Dense(output_dim=dense_layer_dim, input_dim=dense_layer_dim, activation=activation_func, init=init))
-        model_final.add(Dense(output_dim=1, input_dim=dense_layer_dim, activation=activation_func2, init=init))
-        
+            model_final = models.Sequential()
+            model_final.add(Merge([model_cna, model_gene], mode='concat'))
+            model_final.add(Dense(output_dim=dense_layer_dim, input_dim=100, activation=activation_func, init=init))
+            model_final.add(Dense(output_dim=dense_layer_dim, input_dim=dense_layer_dim, activation=activation_func, init=init))
+            model_final.add(Dense(output_dim=1, input_dim=dense_layer_dim, activation=activation_func2, init=init))
+        else :
+            model_final = models.load_model(filepath)
+            
+        # callback-list
         history = EarlyStopping(monitor='val_loss', min_delta=0, patience=3, verbose=0, mode='min')
-        filepath=save_path + "cna_weights.best.hdf5"
         checkpoint = ModelCheckpoint(filepath, monitor='val_loss', verbose=1, save_best_only=True, mode='auto')
+        
         model_final.compile(loss='mse', optimizer='adam')
         hs = model_final.fit([data_cna[id_train], data_fprint[id_train]], data_dep[id_train], nb_epoch=30,
                     validation_split=2/9, batch_size=batch_size, shuffle=True, callbacks=[history, checkpoint])
@@ -547,5 +654,4 @@ def model_train_vis(history, save_path, filename):
     plt.plot(val_loss, 'b', label='Validation')
     plt.title('Training and validation loss(MSE)')
     plt.legend()
-    plt.show()
-    plt.savefig(save_path + filename +'_model_vis.png', dpi=300)
+    plt.savefig(save_path + 'model_vis-' + filename + '.png', dpi=300)
