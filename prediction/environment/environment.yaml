@@ -1,25 +1,30 @@
-name: deepdep_paper
+name: deepdep
 channels:
+  - bioconda
+  - conda-forge
+  - r
   - defaults
 dependencies:
-  - _libgcc_mutex=0.1=main
-  - _openmp_mutex=5.1=1_gnu
-  - ca-certificates=2022.07.19=h06a4308_0
-  - certifi=2020.6.20=pyhd3eb1b0_3
-  - libffi=3.3=he6710b0_2
-  - libgcc-ng=11.2.0=h1234567_1
-  - libgomp=11.2.0=h1234567_1
-  - libstdcxx-ng=11.2.0=h1234567_1
-  - ncurses=6.3=h5eee18b_3
-  - openssl=1.1.1q=h7f8727e_0
+  - _libgcc_mutex=0.1=conda_forge
+  - _openmp_mutex=4.5=2_gnu
+  - ca-certificates=2022.6.15=ha878542_0
+  - certifi=2018.8.24=py35_1001
+  - libffi=3.3=h58526e2_2
+  - libgcc-ng=12.1.0=h8d9b700_16
+  - libgomp=12.1.0=h8d9b700_16
+  - libstdcxx-ng=12.1.0=ha89aaad_16
+  - libzlib=1.2.12=h166bdaf_2
+  - ncurses=6.3=h27087fc_1
+  - openssl=1.1.1q=h166bdaf_0
+  - pip=20.3.4=pyhd8ed1ab_0
   - python=3.5.6=h12debd9_1
-  - readline=8.1.2=h7f8727e_1
-  - setuptools=40.2.0=py35_0
-  - sqlite=3.38.5=hc218d9a_0
-  - tk=8.6.12=h1ccaba5_0
-  - wheel=0.37.1=pyhd3eb1b0_0
-  - xz=5.2.5=h7f8727e_1
-  - zlib=1.2.12=h7f8727e_2
+  - readline=8.1.2=h0f457ee_0
+  - setuptools=40.4.3=py35_0
+  - sqlite=3.39.2=h4ff8645_0
+  - tk=8.6.12=h27826a3_0
+  - wheel=0.37.1=pyhd8ed1ab_0
+  - xz=5.2.5=h516909a_1
+  - zlib=1.2.12=h166bdaf_2
   - pip:
     - backcall==0.2.0
     - bleach==1.5.0
@@ -48,7 +53,6 @@ dependencies:
     - pathlib==1.0.1
     - pexpect==4.8.0
     - pickleshare==0.7.5
-    - pip==20.3.4
     - prompt-toolkit==2.0.10
     - protobuf==3.19.4
     - ptyprocess==0.7.0
@@ -72,4 +76,4 @@ dependencies:
     - wcwidth==0.2.5
     - werkzeug==1.0.1
     - zipp==1.2.0
-prefix: /home/wmbio/anaconda3/envs/deepdep_paper
+prefix: /home/wmbio/anaconda3/envs/deepdep
