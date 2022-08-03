@@ -3,25 +3,62 @@ source("src/function.R")
 path <- "/home/wmbio/WORK/gitworking/Dependency_prediction//preprocessing/PREDICTION"
 now_date <- Sys.time() %>% str_split(" ") %>% unlist() %>% .[1]
 save_path <- paste0(path, "/", now_date)
-
 dir.create(save_path, showWarnings = TRUE, recursive = TRUE)
 
-ccls_wmbio <- read_delim("WMBIO_CCLS.txt", delim = "\t", col_names = F) %>% pull(1)
+prep_path <- paste0(save_path, "/prep/")
+dir.create(prep_path, showWarnings = TRUE, recursive = TRUE)
 
+list.files(prep_path) %>% lapply(X = ., FUN = function(value){
+  intersection_type <- str_split(value, '_') %>% unlist() %>% .[1]
+})
+
+ccls_wmbio <- read_delim("WMBIO_CCLS.txt", delim = "\t", col_names = F) %>% pull(1)
 ccle_omics_extraction(ccls = cclw_wmbio,
                       CCLE_SAMPLE_INFO = "/home/wmbio/WORK/gitworking/Dependency_prediction/preprocessing/RAW/CCLs/sample_info.csv", 
                       CCLE_EXP_PATH = "/home/wmbio/WORK/gitworking/Dependency_prediction/preprocessing/RAW/CCLs/CCLE_expression.csv",
                       CCLE_MUT_PATH = "/home/wmbio/WORK/gitworking/Dependency_prediction/preprocessing/RAW/CCLs/CCLE_mutations.csv",
                       CCLE_METH_PATH = "/home/wmbio/WORK/gitworking/Dependency_prediction/preprocessing/RAW/CCLs/CCLs_methylation_GSE68379.Rds",
                       CCLE_CNA_PATH = "/home/wmbio/WORK/gitworking/Dependency_prediction/preprocessing/RAW/CCLs/CCLE_segment_cn.csv",
-                      save_path = save_path)
+                      save_path = prep_path)
 
-# predict
-Prep4DeepDEP(
-  exp.data = ccle_exp_com %>% select(Gene, all_of(test_col)),
-  mut.data = ccle_mut_com %>% select(Gene, all_of(test_col)),
-  meth.data = ccle_meth_com %>% select(Probe, all_of(test_col)),
-  cna.data = ccle_cna_com %>% filter(CCLE_name %in% test_col),
-  mode = "prediction",
-  filename.out = paste0(save_path, "/predict_wmbio_ccls"))
+# Prep4DeepDEP 
+type_list <- list.files(prep_path) %>% 
+  lapply(X = ., FUN = function(value){
+    str_split(value, '_') %>% unlist() %>% .[1]
+  }) %>% 
+  unlist() %>% 
+  unique()
+
+for(tl in type_list){
+  # meth-only or cna-only pass
+  if(tl == "meth" | tl == "cna")
+    next
+  tryCatch(
+    expr = {exp.data <- read.delim(file = paste0(prep_path, tl, "_prep_exp.txt"))},
+    error = function(e){exp.data <<- NULL}
+  )
+  tryCatch(
+    expr = {mut.data <- read.delim(file = paste0(prep_path, tl, "_prep_mut.txt"))},
+    error = function(e){mut.data <<- NULL}
+  )
+  tryCatch(
+    expr = {cna.data <- read.delim(file = paste0(prep_path, tl, "_prep_cna.txt"))},
+    error = function(e){cna.data <<- NULL}
+  )
+  tryCatch(
+    expr = {meth.data <- read.delim(file = paste0(prep_path, tl, "_prep_meth.txt"))},
+    error = function(e){meth.data <<- NULL}
+  )
+  
+  # predict
+  Prep4DeepDEP(
+    exp.data = exp.data,
+    mut.data = mut.data,
+    meth.data = meth.data,
+    cna.data = cna.data,
+    mode = "prediction",
+    filename.out = paste0(save_path, "/", tl, "_wmbio_ccls"))
+  
+}
+
 

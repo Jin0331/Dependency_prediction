@@ -707,6 +707,14 @@ ccle_omics_extraction <- function(ccls, CCLE_SAMPLE_INFO = "/home/wmbio/WORK/git
   ccle_meth %>% select(Probe, any_of(tmp))
   ccle_cna %>% filter(CCLE_name %in% tmp)
   
+  new_name <- names(intersect_target) %>% 
+    lapply(X = ., FUN = function(n){
+      n_split <- str_split(n, "\\..") %>% unlist() %>% 
+        paste0(collapse = "-")
+    }) %>% unlist()
+  
+  names(intersect_target) <- new_name
+  
   lapply(X = names(intersect_target), FUN = function(value){
     target_list <- intersect_target[[value]]
     
@@ -719,13 +727,13 @@ ccle_omics_extraction <- function(ccls, CCLE_SAMPLE_INFO = "/home/wmbio/WORK/git
     cna.data <- ccle_cna %>% filter(CCLE_name %in% target_list)
     
     if(ncol(exp.data) > 1)
-      write_delim(x = exp.data, file = paste0(save_path, "/prediction_exp_", value, ".txt"), delim = "\t")
+      write_delim(x = exp.data, file = paste0(save_path, "/", value, "_prep_exp.txt"), delim = "\t")
     if(ncol(mut.data) > 1)
-      write_delim(x = mut.data, file = paste0(save_path, "/prediction_mut_", value, ".txt"), delim = "\t")
+      write_delim(x = mut.data, file = paste0(save_path, "/", value, "_prep_mut.txt"), delim = "\t")
     if(ncol(meth.data) > 1)
-      write_delim(x = meth.data, file = paste0(save_path, "/prediction_meth_", value, ".txt"), delim = "\t")
+      write_delim(x = meth.data, file = paste0(save_path, "/", value, "_prep_meth.txt"), delim = "\t")
     if(nrow(cna.data) >= 1)
-      write_delim(x = cna.data, file = paste0(save_path, "/prediction_cna_", value, ".txt"), delim = "\t")
+      write_delim(x = cna.data, file = paste0(save_path, "/", value, "_prep_cna.txt"), delim = "\t")
     
   })
 }
