@@ -28,7 +28,8 @@ activation_func = 'relu' # for all middle layers
 activation_func2 = 'linear' # for output layer to output unbounded gene-effect scores
 init = 'he_uniform'
 dense_layer_dim = 250
-batch_size = 200
+batch_size = 250
+num_epochs = 30
 
 
 def load_data(filename):
@@ -121,10 +122,27 @@ def trainset_load(npz_path="prediction/data/ccl_complete_data_501CCL_1298DepOI_6
                             data_dep=data_dep, data_fprint=data_fprint)
     else :
         data = np.load(npz_path)
-        data_exp = data['data_exp']
-        data_mut = data['data_mut']
-        data_cna = data['data_cna']
-        data_meth = data['data_meth']
+        
+        if exp:
+            data_exp = data['data_exp']
+        else :
+            data_exp = None
+        
+        if mut:
+            data_mut = data['data_mut']
+        else :
+            data_mut = None
+        
+        if cna:
+            data_cna = data['data_cna']
+        else :
+            data_cna = None
+        
+        if meth:
+            data_meth = data['data_meth']
+        else :
+            data_meth = None
+        
         data_fprint = data['data_fprint']
         data_dep = data['data_dep']
     
@@ -203,7 +221,7 @@ def full_model(data_mut, data_exp, data_cna, data_meth,
 
         model_final.compile(loss='mse', optimizer='adam')
         hs = model_final.fit([data_mut[id_train], data_exp[id_train], data_cna[id_train], data_meth[id_train],
-                         data_fprint[id_train]], data_dep[id_train], nb_epoch=30,
+                         data_fprint[id_train]], data_dep[id_train], nb_epoch=num_epochs,
                     validation_split=2/9, batch_size=batch_size, shuffle=True, callbacks=[history, checkpoint])
         cost_testing = model_final.evaluate([data_mut[id_test], data_exp[id_test], data_cna[id_test], data_meth[id_test],
                          data_fprint[id_test]], data_dep[id_test], verbose=0, batch_size=batch_size)
@@ -271,7 +289,7 @@ def mut_exp_cna_model(data_mut, data_exp, data_cna,
 
         model_final.compile(loss='mse', optimizer='adam')
         hs = model_final.fit([data_mut[id_train], data_exp[id_train], data_cna[id_train],
-                         data_fprint[id_train]], data_dep[id_train], nb_epoch=30,
+                         data_fprint[id_train]], data_dep[id_train], nb_epoch=num_epochs,
                     validation_split=2/9, batch_size=batch_size, shuffle=True, callbacks=[history, checkpoint])
         cost_testing = model_final.evaluate([data_mut[id_test], data_exp[id_test], data_cna[id_test],
                          data_fprint[id_test]], data_dep[id_test], verbose=0,
@@ -340,7 +358,7 @@ def mut_exp_meth_model(data_mut, data_exp, data_meth,
 
         model_final.compile(loss='mse', optimizer='adam')
         hs = model_final.fit([data_mut[id_train], data_exp[id_train], data_meth[id_train],
-                         data_fprint[id_train]], data_dep[id_train], nb_epoch=30,
+                         data_fprint[id_train]], data_dep[id_train], nb_epoch=num_epochs,
                     validation_split=2/9, batch_size=batch_size, shuffle=True, callbacks=[history, checkpoint])
         cost_testing = model_final.evaluate([data_mut[id_test], data_exp[id_test], data_meth[id_test],
                          data_fprint[id_test]], data_dep[id_test], verbose=0,
@@ -409,7 +427,7 @@ def mut_cna_meth_model(data_mut, data_cna, data_meth,
 
         model_final.compile(loss='mse', optimizer='adam')
         hs = model_final.fit([data_mut[id_train], data_cna[id_train], data_meth[id_train],
-                         data_fprint[id_train]], data_dep[id_train], nb_epoch=30,
+                         data_fprint[id_train]], data_dep[id_train], nb_epoch=num_epochs,
                     validation_split=2/9, batch_size=batch_size, shuffle=True, callbacks=[history, checkpoint])
         cost_testing = model_final.evaluate([data_mut[id_test], data_cna[id_test], data_meth[id_test],
                          data_fprint[id_test]], data_dep[id_test], verbose=0,
@@ -468,7 +486,7 @@ def mut_exp_model(data_mut, data_exp, data_fprint, data_dep, id_train, id_test,
         checkpoint = ModelCheckpoint(filepath, monitor='val_loss', verbose=1, save_best_only=True, mode='auto')
 
         model_final.compile(loss='mse', optimizer='adam')
-        hs = model_final.fit([data_mut[id_train], data_exp[id_train], data_fprint[id_train]], data_dep[id_train], nb_epoch=30,
+        hs = model_final.fit([data_mut[id_train], data_exp[id_train], data_fprint[id_train]], data_dep[id_train], nb_epoch=num_epochs,
                     validation_split=2/9, batch_size=batch_size, shuffle=True, callbacks=[history, checkpoint])
         cost_testing = model_final.evaluate([data_mut[id_test], data_exp[id_test], data_fprint[id_test]], data_dep[id_test], verbose=0,
                                         batch_size=batch_size)
@@ -510,7 +528,7 @@ def exp_model(data_exp, data_fprint, data_dep, id_train, id_test, premodel_exp, 
         checkpoint = ModelCheckpoint(filepath, monitor='val_loss', verbose=1, save_best_only=True, mode='auto')
 
         model_final.compile(loss='mse', optimizer='adam')
-        hs = model_final.fit([data_exp[id_train], data_fprint[id_train]], data_dep[id_train], nb_epoch=30,
+        hs = model_final.fit([data_exp[id_train], data_fprint[id_train]], data_dep[id_train], nb_epoch=num_epochs,
                     validation_split=2/9, batch_size=batch_size, shuffle=True, callbacks=[history, checkpoint])
         cost_testing = model_final.evaluate([data_exp[id_test], data_fprint[id_test]], data_dep[id_test], verbose=0,
                                         batch_size=batch_size)
@@ -551,7 +569,7 @@ def mut_model(data_mut, data_fprint, data_dep, id_train, id_test, premodel_mut, 
         checkpoint = ModelCheckpoint(filepath, monitor='val_loss', verbose=1, save_best_only=True, mode='auto')
         
         model_final.compile(loss='mse', optimizer='adam')
-        hs = model_final.fit([data_mut[id_train], data_fprint[id_train]], data_dep[id_train], nb_epoch=30,
+        hs = model_final.fit([data_mut[id_train], data_fprint[id_train]], data_dep[id_train], nb_epoch=num_epochs,
                     validation_split=2/9, batch_size=batch_size, shuffle=True, callbacks=[history, checkpoint])
         cost_testing = model_final.evaluate([data_mut[id_test], data_fprint[id_test]], data_dep[id_test], verbose=0,
                                         batch_size=batch_size)
@@ -589,7 +607,7 @@ def meth_model(data_meth, data_fprint, data_dep, id_train, id_test, premodel_met
         
         checkpoint = ModelCheckpoint(filepath, monitor='val_loss', verbose=1, save_best_only=True, mode='auto')
         model_final.compile(loss='mse', optimizer='adam')
-        hs = model_final.fit([data_meth[id_train], data_fprint[id_train]], data_dep[id_train], nb_epoch=30,
+        hs = model_final.fit([data_meth[id_train], data_fprint[id_train]], data_dep[id_train], nb_epoch=num_epochs,
                     validation_split=2/9, batch_size=batch_size, shuffle=True, callbacks=[history, checkpoint])
         cost_testing = model_final.evaluate([data_meth[id_test], data_fprint[id_test]], data_dep[id_test], verbose=0,
                                         batch_size=batch_size)
@@ -631,7 +649,7 @@ def cna_model(data_cna, data_fprint, data_dep, id_train, id_test, premodel_cna, 
         checkpoint = ModelCheckpoint(filepath, monitor='val_loss', verbose=1, save_best_only=True, mode='auto')
         
         model_final.compile(loss='mse', optimizer='adam')
-        hs = model_final.fit([data_cna[id_train], data_fprint[id_train]], data_dep[id_train], nb_epoch=30,
+        hs = model_final.fit([data_cna[id_train], data_fprint[id_train]], data_dep[id_train], nb_epoch=num_epochs,
                     validation_split=2/9, batch_size=batch_size, shuffle=True, callbacks=[history, checkpoint])
         cost_testing = model_final.evaluate([data_cna[id_test], data_fprint[id_test]], data_dep[id_test], verbose=0,
                                         batch_size=batch_size)
@@ -724,3 +742,23 @@ def model_train_vis(history, save_path, filename):
     plt.title('Training and validation loss(MSE)')
     plt.legend()
     plt.savefig(save_path + 'model_vis-' + filename + '.png', dpi=300)
+
+def train_test_index(index_data, num_depoi=1298, split_ratio=0.75):
+    num_DepOI = num_depoi # 1298 DepOIs as defined in our paper
+    num_ccl = int(index_data.shape[0]/num_DepOI)
+    split_ratio = split_ratio
+
+    # 80% CCLs for training/validation, and 20% for testing
+    id_rand = np.random.permutation(num_ccl)
+    id_cell_train = id_rand[np.arange(0, round(num_ccl * split_ratio))]
+    id_cell_test = id_rand[np.arange(round(num_ccl * split_ratio), num_ccl)]
+    id_train = np.arange(0, num_DepOI) + id_cell_train[0]*num_DepOI
+    for y in id_cell_train:
+        id_train = np.union1d(id_train, np.arange(0, num_DepOI) + y*num_DepOI)
+    id_test = np.arange(0, num_DepOI) + id_cell_test[0] * num_DepOI
+    for y in id_cell_test:
+        id_test = np.union1d(id_test, np.arange(0, num_DepOI) + y*num_DepOI)
+    print("\n\nTraining/validation on %d samples (%d CCLs x %d DepOIs) and testing on %d samples (%d CCLs x %d DepOIs).\n\n" % (
+        len(id_train), len(id_cell_train), num_DepOI, len(id_test), len(id_cell_test), num_DepOI))
+    
+    return id_train, id_test
