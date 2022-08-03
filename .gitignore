@@ -11,6 +11,7 @@ preprocessing/DATA
 
 prediction/train_preprocessing
 prediction/model
+prediction/DepOI_1298_model
 prediction/metadata
 prediction/data
 prediction/custom_model
