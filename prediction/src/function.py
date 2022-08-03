@@ -348,7 +348,76 @@ def mut_exp_meth_model(data_mut, data_exp, data_meth,
         print("\n\nMut_Exp_Meth-DeepDEP model training completed in %.1f mins.\nloss:%.4f valloss:%.4f testloss:%.4f" % ((time.time() - t)/60, history.model.model.history.history['loss'][history.stopped_epoch], history.model.model.history.history['val_loss'][history.stopped_epoch], cost_testing))
         
         return model_final, hs   
+
+def mut_cna_meth_model(data_mut, data_cna, data_meth, 
+               data_fprint, data_dep, id_train, id_test, 
+               premodel_mut, premodel_cna, premodel_meth,
+               save_path):
+    t = time.time()
+    filepath=save_path + "mut_cna_meth_weights.best.hdf5"
     
+    with tf.device('/cpu:0'):
+        if exists(filepath) is False:
+            model_mut = models.Sequential()
+            model_mut.add(Dense(output_dim=1000, input_dim=premodel_mut[0][0].shape[0], activation=activation_func,
+                                weights=premodel_mut[0], trainable=True))
+            model_mut.add(Dense(output_dim=100, input_dim=1000, activation=activation_func, weights=premodel_mut[1],
+                                trainable=True))
+            model_mut.add(Dense(output_dim=50, input_dim=100, activation=activation_func, weights=premodel_mut[2],
+                                trainable=True))
+
+            # subnetwork of copy number alterations
+            model_cna = models.Sequential()
+            model_cna.add(Dense(output_dim=500, input_dim=premodel_cna[0][0].shape[0], activation=activation_func,
+                                weights=premodel_cna[0], trainable=True))
+            model_cna.add(Dense(output_dim=200, input_dim=500, activation=activation_func, weights=premodel_cna[1],
+                                trainable=True))
+            model_cna.add(Dense(output_dim=50, input_dim=200, activation=activation_func, weights=premodel_cna[2],
+                                trainable=True))
+
+            # subnetwork of DNA methylations
+            model_meth = models.Sequential()
+            model_meth.add(Dense(output_dim=500, input_dim=premodel_meth[0][0].shape[0], activation=activation_func,
+                                 weights=premodel_meth[0], trainable=True))
+            model_meth.add(Dense(output_dim=200, input_dim=500, activation=activation_func, weights=premodel_meth[1],
+                                 trainable=True))
+            model_meth.add(Dense(output_dim=50, input_dim=200, activation=activation_func, weights=premodel_meth[2],
+                                 trainable=True))
+
+            # subnetwork of gene fingerprints
+            model_gene = models.Sequential()
+            model_gene.add(Dense(output_dim=1000, input_dim=data_fprint.shape[1], activation=activation_func, init=init,
+                                 trainable=True))
+            model_gene.add(Dense(output_dim=100, input_dim=1000, activation=activation_func, init=init, trainable=True))
+            model_gene.add(Dense(output_dim=50, input_dim=100, activation=activation_func, init=init, trainable=True))
+
+            # prediction network
+            model_final = models.Sequential()
+            model_final.add(Merge([model_mut, model_cna, model_meth, model_gene], mode='concat'))
+            model_final.add(Dense(output_dim=dense_layer_dim, input_dim=200, activation=activation_func, init=init,
+                                  trainable=True))
+            model_final.add(Dense(output_dim=dense_layer_dim, input_dim=dense_layer_dim, activation=activation_func, init=init,
+                                  trainable=True))
+            model_final.add(Dense(output_dim=1, input_dim=dense_layer_dim, activation=activation_func2, init=init,
+                                  trainable=True))
+        else :
+            model_final = models.load_model(filepath)
+            
+        # callback list
+        history = EarlyStopping(monitor='val_loss', min_delta=0, patience=3, verbose=1, mode='min') # early stopping
+        checkpoint = ModelCheckpoint(filepath, monitor='val_loss', verbose=1, save_best_only=True, mode='auto')
+
+        model_final.compile(loss='mse', optimizer='adam')
+        hs = model_final.fit([data_mut[id_train], data_cna[id_train], data_meth[id_train],
+                         data_fprint[id_train]], data_dep[id_train], nb_epoch=30,
+                    validation_split=2/9, batch_size=batch_size, shuffle=True, callbacks=[history, checkpoint])
+        cost_testing = model_final.evaluate([data_mut[id_test], data_cna[id_test], data_meth[id_test],
+                         data_fprint[id_test]], data_dep[id_test], verbose=0,
+                                        batch_size=batch_size)
+        print("\n\nMut_CNA_Meth-DeepDEP model training completed in %.1f mins.\nloss:%.4f valloss:%.4f testloss:%.4f" % ((time.time() - t)/60, history.model.model.history.history['loss'][history.stopped_epoch], history.model.model.history.history['val_loss'][history.stopped_epoch], cost_testing))
+        
+        return model_final, hs       
+
 
     
 def mut_exp_model(data_mut, data_exp, data_fprint, data_dep, id_train, id_test, 
