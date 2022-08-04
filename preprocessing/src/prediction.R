@@ -8,10 +8,6 @@ dir.create(save_path, showWarnings = TRUE, recursive = TRUE)
 prep_path <- paste0(save_path, "/prep/")
 dir.create(prep_path, showWarnings = TRUE, recursive = TRUE)
 
-list.files(prep_path) %>% lapply(X = ., FUN = function(value){
-  intersection_type <- str_split(value, '_') %>% unlist() %>% .[1]
-})
-
 ccls_wmbio <- read_delim("WMBIO_CCLS.txt", delim = "\t", col_names = F) %>% pull(1)
 ccle_omics_extraction(ccls = cclw_wmbio,
                       CCLE_SAMPLE_INFO = "/home/wmbio/WORK/gitworking/Dependency_prediction/preprocessing/RAW/CCLs/sample_info.csv", 
@@ -31,8 +27,6 @@ type_list <- list.files(prep_path) %>%
 
 for(tl in type_list){
   # meth-only or cna-only pass
-  if(tl == "meth" | tl == "cna")
-    next
   tryCatch(
     expr = {exp.data <- read.delim(file = paste0(prep_path, tl, "_prep_exp.txt"))},
     error = function(e){exp.data <<- NULL}
@@ -50,15 +44,21 @@ for(tl in type_list){
     error = function(e){meth.data <<- NULL}
   )
   
-  # predict
-  Prep4DeepDEP(
-    exp.data = exp.data,
-    mut.data = mut.data,
-    meth.data = meth.data,
-    cna.data = cna.data,
-    mode = "prediction",
-    filename.out = paste0(save_path, "/", tl, "_wmbio_ccls"))
+  if((!is.null(exp.data) && ncol(exp.data) > 1) |
+     (!is.null(mut.data) && ncol(mut.data) > 1) |
+     (!is.null(meth.data) && ncol(exp.data) > 1) |
+     (!is.null(cna.data) && length(unique(cna.data$CCLE_name)) > 1)){
+    # predict
+    Prep4DeepDEP(
+      exp.data = exp.data,
+      mut.data = mut.data,
+      meth.data = meth.data,
+      cna.data = cna.data,
+      mode = "prediction",
+      filename.out = paste0(save_path, "/", tl, "_wmbio_ccls"))
+  }
   
+
 }
 
 
