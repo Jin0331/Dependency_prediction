@@ -57,8 +57,6 @@ for(tl in type_list){
       mode = "prediction",
       filename.out = paste0(save_path, "/", tl, "_wmbio_ccls"))
   }
-  
-
 }
 
 
