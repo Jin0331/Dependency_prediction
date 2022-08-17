@@ -762,3 +762,200 @@ def train_test_index(index_data, num_depoi=1298, split_ratio=0.75):
         len(id_train), len(id_cell_train), num_DepOI, len(id_test), len(id_cell_test), num_DepOI))
     
     return id_train, id_test
+
+
+def each_prediction(model_path, type_, predict_path, barcode, save_path):
+    
+    now_date = datetime.datetime.now().strftime("%Y%m%d")
+    Path(save_path + '/' + now_date).mkdir(parents=True, exist_ok=True)
+    barcode = type_ + '_' + barcode + '_'
+    
+    try:
+        with tf.device('/cpu:0'):
+            model_saved = models.load_model(model_path + "model_%s.h5" % type_)
+    except Exception as e:
+        print('invalid type-', e)
+        
+    # full omics
+    if type_ == "cna-exp-meth-mut":
+        print(type_)
+        # load TCGA genomics data and gene fingerprints
+        data_mut, data_labels_mut, sample_names_mut, gene_names_mut = load_data_prediction(predict_path + barcode + "mut_prediction.txt")
+        data_exp, data_labels_exp, sample_names_exp, gene_names_exp = load_data_prediction(predict_path + barcode + "exp_prediction.txt")
+        data_cna, data_labels_cna, sample_names_cna, gene_names_cna = load_data_prediction(predict_path + barcode + "cna_prediction.txt")
+        data_meth, data_labels_meth, sample_names_meth, gene_names_meth = load_data_prediction(predict_path + barcode + "meth_prediction.txt")
+        data_fprint_DepOIs, data_labels_fprint, gene_names_fprint, function_names_fprint = load_data_prediction(predict_path + barcode + "fingerprint_prediction.txt")
+        print("\n\nDatasets successfully loaded.\n\n")
+        
+        batch_size = 200
+        with tf.device('/cpu:0'):
+            t = time.time()
+            data_pred = np.zeros((data_exp.shape[0], data_fprint_DepOIs.shape[0]))
+            for z in np.arange(0, data_exp.shape[0]):
+                data_pred_tmp = model_saved.predict([
+                    data_mut[np.repeat(z, data_fprint_DepOIs.shape[0])],
+                    data_exp[np.repeat(z, data_fprint_DepOIs.shape[0])],
+                    data_cna[np.repeat(z, data_fprint_DepOIs.shape[0])],
+                    data_meth[np.repeat(z, data_fprint_DepOIs.shape[0])],
+                    data_fprint_DepOIs
+                ], 
+                    batch_size=batch_size, verbose=0)
+                data_pred[z] = np.transpose(data_pred_tmp)
+                print("Unscreended sample %d predicted..." % z)
+                
+        data_pred_df = pd.DataFrame(data=np.transpose(data_pred), index=gene_names_fprint, columns=sample_names_mut[0:data_exp.shape[0]])
+        data_pred_df.to_csv(save_path + '/' + now_date + '/' + type_ + '_prediction_result.csv', sep=',')
+    
+    elif type_ == "cna-exp-mut":
+        print(type_)
+        # load TCGA genomics data and gene fingerprints
+        data_mut, data_labels_mut, sample_names_mut, gene_names_mut = load_data_prediction(predict_path + barcode + "mut_prediction.txt")
+        data_exp, data_labels_exp, sample_names_exp, gene_names_exp = load_data_prediction(predict_path + barcode + "exp_prediction.txt")
+        data_cna, data_labels_cna, sample_names_cna, gene_names_cna = load_data_prediction(predict_path + barcode + "cna_prediction.txt")
+        data_fprint_DepOIs, data_labels_fprint, gene_names_fprint, function_names_fprint = load_data_prediction(predict_path + barcode + "fingerprint_prediction.txt")
+        print("\n\nDatasets successfully loaded.\n\n")
+        
+        batch_size = 200
+        with tf.device('/cpu:0'):
+            t = time.time()
+            data_pred = np.zeros((data_exp.shape[0], data_fprint_DepOIs.shape[0]))
+            for z in np.arange(0, data_exp.shape[0]):
+                data_pred_tmp = model_saved.predict([
+                    data_mut[np.repeat(z, data_fprint_DepOIs.shape[0])],
+                    data_exp[np.repeat(z, data_fprint_DepOIs.shape[0])],
+                    data_cna[np.repeat(z, data_fprint_DepOIs.shape[0])],
+                    data_fprint_DepOIs
+                ], 
+                    batch_size=batch_size, verbose=0)
+                data_pred[z] = np.transpose(data_pred_tmp)
+                print("Unscreended sample %d predicted..." % z)
+                
+        data_pred_df = pd.DataFrame(data=np.transpose(data_pred), index=gene_names_fprint, columns=sample_names_mut[0:data_exp.shape[0]])
+        data_pred_df.to_csv(save_path + '/' + now_date + '/' + type_ + '_prediction_result.csv', sep=',')
+        
+    elif type_ == "cna-meth-mut":
+        print(type_)
+        # load TCGA genomics data and gene fingerprints
+        data_mut, data_labels_mut, sample_names_mut, gene_names_mut = load_data_prediction(predict_path + barcode + "mut_prediction.txt")
+        data_cna, data_labels_cna, sample_names_cna, gene_names_cna = load_data_prediction(predict_path + barcode + "cna_prediction.txt")
+        data_meth, data_labels_meth, sample_names_meth, gene_names_meth = load_data_prediction(predict_path + barcode + "meth_prediction.txt")
+        data_fprint_DepOIs, data_labels_fprint, gene_names_fprint, function_names_fprint = load_data_prediction(predict_path + barcode + "fingerprint_prediction.txt")
+        print("\n\nDatasets successfully loaded.\n\n")
+        
+        batch_size = 200
+        with tf.device('/cpu:0'):
+            t = time.time()
+            data_pred = np.zeros((data_mut.shape[0], data_fprint_DepOIs.shape[0]))
+            for z in np.arange(0, data_mut.shape[0]):
+                data_pred_tmp = model_saved.predict([
+                    data_mut[np.repeat(z, data_fprint_DepOIs.shape[0])],
+                    data_cna[np.repeat(z, data_fprint_DepOIs.shape[0])],
+                    data_meth[np.repeat(z, data_fprint_DepOIs.shape[0])],
+                    data_fprint_DepOIs
+                ], 
+                    batch_size=batch_size, verbose=0)
+                data_pred[z] = np.transpose(data_pred_tmp)
+                print("Unscreended sample %d predicted..." % z)
+                
+        data_pred_df = pd.DataFrame(data=np.transpose(data_pred), index=gene_names_fprint, columns=sample_names_mut[0:data_exp.shape[0]])
+        data_pred_df.to_csv(save_path + '/' + now_date + '/' + type_ + '_prediction_result.csv', sep=',')
+        
+    elif type_ == "exp-meth-mut":
+        print(type_)
+        # load TCGA genomics data and gene fingerprints
+        data_mut, data_labels_mut, sample_names_mut, gene_names_mut = load_data_prediction(predict_path + barcode + "mut_prediction.txt")
+        data_exp, data_labels_exp, sample_names_exp, gene_names_exp = load_data_prediction(predict_path + barcode + "exp_prediction.txt")
+        data_meth, data_labels_meth, sample_names_meth, gene_names_meth = load_data_prediction(predict_path + barcode + "meth_prediction.txt")
+        data_fprint_DepOIs, data_labels_fprint, gene_names_fprint, function_names_fprint = load_data_prediction(predict_path + barcode + "fingerprint_prediction.txt")
+        print("\n\nDatasets successfully loaded.\n\n")
+        
+        batch_size = 200
+        with tf.device('/cpu:0'):
+            t = time.time()
+            data_pred = np.zeros((data_exp.shape[0], data_fprint_DepOIs.shape[0]))
+            for z in np.arange(0, data_exp.shape[0]):
+                data_pred_tmp = model_saved.predict([
+                    data_mut[np.repeat(z, data_fprint_DepOIs.shape[0])],
+                    data_exp[np.repeat(z, data_fprint_DepOIs.shape[0])],
+                    data_meth[np.repeat(z, data_fprint_DepOIs.shape[0])],
+                    data_fprint_DepOIs
+                ], 
+                    batch_size=batch_size, verbose=0)
+                data_pred[z] = np.transpose(data_pred_tmp)
+                print("Unscreended sample %d predicted..." % z)
+                
+        data_pred_df = pd.DataFrame(data=np.transpose(data_pred), index=gene_names_fprint, columns=sample_names_mut[0:data_exp.shape[0]])
+        data_pred_df.to_csv(save_path + '/' + now_date + '/' + type_ + '_prediction_result.csv', sep=',')
+
+    elif type_ == "exp-mut":
+        print(type_)
+        # load TCGA genomics data and gene fingerprints
+        data_mut, data_labels_mut, sample_names_mut, gene_names_mut = load_data_prediction(predict_path + barcode + "mut_prediction.txt")
+        data_exp, data_labels_exp, sample_names_exp, gene_names_exp = load_data_prediction(predict_path + barcode + "exp_prediction.txt")
+        data_fprint_DepOIs, data_labels_fprint, gene_names_fprint, function_names_fprint = load_data_prediction(predict_path + barcode + "fingerprint_prediction.txt")
+        print("\n\nDatasets successfully loaded.\n\n")
+        
+        batch_size = 200
+        with tf.device('/cpu:0'):
+            t = time.time()
+            data_pred = np.zeros((data_exp.shape[0], data_fprint_DepOIs.shape[0]))
+            for z in np.arange(0, data_exp.shape[0]):
+                data_pred_tmp = model_saved.predict([
+                    data_mut[np.repeat(z, data_fprint_DepOIs.shape[0])],
+                    data_exp[np.repeat(z, data_fprint_DepOIs.shape[0])],
+                    data_fprint_DepOIs
+                ], 
+                    batch_size=batch_size, verbose=0)
+                data_pred[z] = np.transpose(data_pred_tmp)
+                print("Unscreended sample %d predicted..." % z)
+                
+        data_pred_df = pd.DataFrame(data=np.transpose(data_pred), index=gene_names_fprint, columns=sample_names_mut[0:data_exp.shape[0]])
+        data_pred_df.to_csv(save_path + '/' + now_date + '/' + type_ + '_prediction_result.csv', sep=',')
+        
+    elif type_ == "mut":
+        print(type_)
+        # load TCGA genomics data and gene fingerprints
+        data_mut, data_labels_mut, sample_names_mut, gene_names_mut = load_data_prediction(predict_path + barcode + "mut_prediction.txt")
+        data_fprint_DepOIs, data_labels_fprint, gene_names_fprint, function_names_fprint = load_data_prediction(predict_path + barcode + "fingerprint_prediction.txt")
+        print("\n\nDatasets successfully loaded.\n\n")
+        
+        batch_size = 200
+        with tf.device('/cpu:0'):
+            t = time.time()
+            data_pred = np.zeros((data_mut.shape[0], data_fprint_DepOIs.shape[0]))
+            for z in np.arange(0, data_mut.shape[0]):
+                data_pred_tmp = model_saved.predict([
+                    data_mut[np.repeat(z, data_fprint_DepOIs.shape[0])],
+                    data_fprint_DepOIs
+                ], 
+                    batch_size=batch_size, verbose=0)
+                data_pred[z] = np.transpose(data_pred_tmp)
+                print("Unscreended sample %d predicted..." % z)
+                
+        data_pred_df = pd.DataFrame(data=np.transpose(data_pred), index=gene_names_fprint, columns=sample_names_mut[0:data_exp.shape[0]])
+        data_pred_df.to_csv(save_path + '/' + now_date + '/' + type_ + '_prediction_result.csv', sep=',')
+        
+    elif type_ == "exp":
+        print(type_)
+        # load TCGA genomics data and gene fingerprints
+        data_exp, data_labels_exp, sample_names_exp, gene_names_exp = load_data_prediction(predict_path + barcode + "exp_prediction.txt")
+        data_fprint_DepOIs, data_labels_fprint, gene_names_fprint, function_names_fprint = load_data_prediction(predict_path + barcode + "fingerprint_prediction.txt")
+        print("\n\nDatasets successfully loaded.\n\n")
+        
+        batch_size = 200
+        with tf.device('/cpu:0'):
+            t = time.time()
+            data_pred = np.zeros((data_exp.shape[0], data_fprint_DepOIs.shape[0]))
+            for z in np.arange(0, data_exp.shape[0]):
+                data_pred_tmp = model_saved.predict([
+                    data_mut[np.repeat(z, data_fprint_DepOIs.shape[0])],
+                    data_exp[np.repeat(z, data_fprint_DepOIs.shape[0])],
+                    data_meth[np.repeat(z, data_fprint_DepOIs.shape[0])],
+                    data_fprint_DepOIs
+                ], 
+                    batch_size=batch_size, verbose=0)
+                data_pred[z] = np.transpose(data_pred_tmp)
+                print("Unscreended sample %d predicted..." % z)
+                
+        data_pred_df = pd.DataFrame(data=np.transpose(data_pred), index=gene_names_fprint, columns=sample_names_mut[0:data_exp.shape[0]])
+        data_pred_df.to_csv(save_path + '/' + now_date + '/' + type_ + '_prediction_result.csv', sep=',')

@@ -718,6 +718,10 @@ ccle_omics_extraction <- function(ccls, CCLE_SAMPLE_INFO = "/home/wmbio/WORK/git
   lapply(X = names(intersect_target), FUN = function(value){
     target_list <- intersect_target[[value]]
     
+    tmp <- str_split(value, '_') %>% unlist() %>% .[1] %>% 
+      str_split(., "-") %>% unlist() %>% sort()
+    value <- paste0(tmp, collapse = "-")
+    
     if(length(target_list) <= 0)
       return(NULL)
     
