@@ -803,7 +803,7 @@ def each_prediction(model_path, type_, predict_path, barcode, save_path):
                 data_pred[z] = np.transpose(data_pred_tmp)
                 print("Unscreended sample %d predicted..." % z)
                 
-        data_pred_df = pd.DataFrame(data=np.transpose(data_pred), index=gene_names_fprint, columns=sample_names_mut[0:data_exp.shape[0]])
+        data_pred_df = pd.DataFrame(data=np.transpose(data_pred), index=gene_names_fprint, columns=sample_names_mut[0:data_mut.shape[0]])
         data_pred_df.to_csv(save_path + '/' + now_date + '/' + type_ + '_prediction_result.csv', sep=',')
     
     elif type_ == "cna-exp-mut":
@@ -830,7 +830,7 @@ def each_prediction(model_path, type_, predict_path, barcode, save_path):
                 data_pred[z] = np.transpose(data_pred_tmp)
                 print("Unscreended sample %d predicted..." % z)
                 
-        data_pred_df = pd.DataFrame(data=np.transpose(data_pred), index=gene_names_fprint, columns=sample_names_mut[0:data_exp.shape[0]])
+        data_pred_df = pd.DataFrame(data=np.transpose(data_pred), index=gene_names_fprint, columns=sample_names_mut[0:data_mut.shape[0]])
         data_pred_df.to_csv(save_path + '/' + now_date + '/' + type_ + '_prediction_result.csv', sep=',')
         
     elif type_ == "cna-meth-mut":
@@ -857,7 +857,7 @@ def each_prediction(model_path, type_, predict_path, barcode, save_path):
                 data_pred[z] = np.transpose(data_pred_tmp)
                 print("Unscreended sample %d predicted..." % z)
                 
-        data_pred_df = pd.DataFrame(data=np.transpose(data_pred), index=gene_names_fprint, columns=sample_names_mut[0:data_exp.shape[0]])
+        data_pred_df = pd.DataFrame(data=np.transpose(data_pred), index=gene_names_fprint, columns=sample_names_mut[0:data_mut.shape[0]])
         data_pred_df.to_csv(save_path + '/' + now_date + '/' + type_ + '_prediction_result.csv', sep=',')
         
     elif type_ == "exp-meth-mut":
@@ -909,7 +909,7 @@ def each_prediction(model_path, type_, predict_path, barcode, save_path):
                 data_pred[z] = np.transpose(data_pred_tmp)
                 print("Unscreended sample %d predicted..." % z)
                 
-        data_pred_df = pd.DataFrame(data=np.transpose(data_pred), index=gene_names_fprint, columns=sample_names_mut[0:data_exp.shape[0]])
+        data_pred_df = pd.DataFrame(data=np.transpose(data_pred), index=gene_names_fprint, columns=sample_names_mut[0:data_mut.shape[0]])
         data_pred_df.to_csv(save_path + '/' + now_date + '/' + type_ + '_prediction_result.csv', sep=',')
         
     elif type_ == "mut":
@@ -932,7 +932,7 @@ def each_prediction(model_path, type_, predict_path, barcode, save_path):
                 data_pred[z] = np.transpose(data_pred_tmp)
                 print("Unscreended sample %d predicted..." % z)
                 
-        data_pred_df = pd.DataFrame(data=np.transpose(data_pred), index=gene_names_fprint, columns=sample_names_mut[0:data_exp.shape[0]])
+        data_pred_df = pd.DataFrame(data=np.transpose(data_pred), index=gene_names_fprint, columns=sample_names_mut[0:data_mut.shape[0]])
         data_pred_df.to_csv(save_path + '/' + now_date + '/' + type_ + '_prediction_result.csv', sep=',')
         
     elif type_ == "exp":
@@ -957,5 +957,5 @@ def each_prediction(model_path, type_, predict_path, barcode, save_path):
                 data_pred[z] = np.transpose(data_pred_tmp)
                 print("Unscreended sample %d predicted..." % z)
                 
-        data_pred_df = pd.DataFrame(data=np.transpose(data_pred), index=gene_names_fprint, columns=sample_names_mut[0:data_exp.shape[0]])
+        data_pred_df = pd.DataFrame(data=np.transpose(data_pred), index=gene_names_fprint, columns=sample_names_exp[0:data_exp.shape[0]])
         data_pred_df.to_csv(save_path + '/' + now_date + '/' + type_ + '_prediction_result.csv', sep=',')
