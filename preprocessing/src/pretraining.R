@@ -10,7 +10,7 @@ dir.create(save_path, showWarnings = FALSE, recursive = TRUE)
 tcga_preprocessing(save_path = save_path)
 
 # DeepDEP input source CCLE ----
-ccle_preprocessing(save_path = save_path)
+ccle_preprocessing(save_path = save_path, DepOI_SD = 0)
 
 # Final, CCLE-TCGA intersection ----
 # TCGA index RData load

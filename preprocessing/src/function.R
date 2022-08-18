@@ -367,7 +367,7 @@ ccle_preprocessing <- function(save_path = ".",
                                CCLE_METH_PATH = "/home/wmbio/WORK/gitworking/Dependency_prediction/preprocessing/RAW/CCLs/CCLs_methylation_GSE68379.Rds",
                                CCLE_CNA_PATH = "/home/wmbio/WORK/gitworking/Dependency_prediction/preprocessing/RAW/CCLs/CCLE_segment_cn.csv",
                                CCLE_GD_PATH = "/home/wmbio/WORK/gitworking/Dependency_prediction/preprocessing/RAW/CCLs/CRISPR_gene_effect.csv",
-                               DepOI_defualt = "/home/wmbio/WORK/gitworking/Dependency_prediction/preprocessing/PAPER/default_dep_genes_1298.RData",
+                               remove_default_OI = FALSE,
                                DepOI_SD = NULL){
   setwd(path)
   
@@ -541,19 +541,29 @@ ccle_preprocessing <- function(save_path = ".",
   ccle_mut_com <- ccle_mut %>% select(Gene, any_of(ccle_omics_intersection))
   ccle_cna_com <- ccle_cna %>% filter(CCLE_name %in% ccle_omics_intersection)
   ccle_meth_com <- ccle_meth %>% select(Probe, any_of(ccle_omics_intersection))
+  ccle_gene_dependency <- ccle_gene_dependency %>% select(Gene, any_of(ccle_omics_intersection))
   
   # DepOIs
   if(is.null(DepOI_SD)){
     load(DepOI_defualt)
   } else {
-    dep.data <- apply(ccle_gene_dependency, MARGIN = 1, sd, na.rm = TRUE) %>% 
-      tibble(Gene = ccle_gene_dependency$Gene, SD = .) %>% 
+    gd_matrix <- ccle_gene_dependency %>% select(-1) %>% as.matrix()
+    rownames(gd_matrix) <- ccle_gene_dependency$Gene
+    
+    dep.data_custom <- apply(gd_matrix, MARGIN = 1, sd, na.rm = TRUE) %>% 
+      tibble(Gene = rownames(gd_matrix), SD = .) %>% 
       filter(SD >= DepOI_SD) %>% 
       select(Gene)
+    
+    if(remove_default_OI){
+      path <- system.file("extdata/", package = "Prep4DeepDEP")
+      load(paste0(path, "default_dep_genes_1298.RData"))
+      dep.data <- setdiff(dep.data_custom[[1]], dep.data[[1]]) %>% tibble(Gene = .)
+    }
   }
+
   ccle_gene_dependency_com <- ccle_gene_dependency %>% 
-    inner_join(x = ., y = dep.data, by = "Gene") %>% 
-    select(Gene, any_of(ccle_omics_intersection))
+    inner_join(x = ., y = dep.data, by = "Gene")
   
   # Save train dataset
   save(ccle_exp_com, file = paste0(save_path,"/CCLE-COSMIC-EXPRESSION.RData"))
@@ -1138,4 +1148,38 @@ Prep4DeepDEP_custom <- function (exp.data = NULL, mut.data = NULL, meth.data = N
   return(bigTable)
 }
 
-
+depoi_extraction <- function(GD_PATH = "/home/wmbio/WORK/gitworking/Dependency_prediction/prediction/data/paper/gene_effect.csv",
+                             MUT_PATH = "/home/wmbio/WORK/gitworking/Dependency_prediction/prediction/data/paper/ccl_mut_data_paired_with_tcga.txt",
+                             DepOI_SD = 0.15, remove_default_OI = FALSE){
+  
+  # mutation
+  ccls <- data.table::fread(file = MUT_PATH, sep = "\t") %>% colnames() %>% .[-1]
+  
+  # gene dependency
+  gd <- data.table::fread(file = GD_PATH, sep = ",") %>%  
+    separate(cell_line_name, sep = "_", into = c("cell_line_name", "B","C"), ) %>% 
+    select(-B, -C) %>% 
+    filter(cell_line_name %in% ccls)
+  
+  gd_genes <- gd %>% colnames() %>% 
+    lapply(X = ., FUN = function(value){
+      str_split(string = value, pattern = " \\(") %>% 
+        unlist() %>% .[1] %>% return()
+    }) %>% unlist()
+  
+  gd_matrix <- gd %>% select(-1) %>% t()
+  rownames(gd_matrix) <- gd_genes[-1]
+  
+  dep.data_custom <- apply(gd_matrix, MARGIN = 1, sd, na.rm = TRUE) %>% 
+    tibble(Gene = rownames(gd_matrix), SD = .) %>% 
+    filter(SD >= DepOI_SD) %>% 
+    select(Gene)
+  
+  if(remove_default_OI){
+    path <- system.file("extdata/", package = "Prep4DeepDEP")
+    load(paste0(path, "default_dep_genes_1298.RData"))
+    dep.data_custom <- setdiff(dep.data_custom[[1]], dep.data[[1]]) %>% tibble(Gene = .)
+  }
+  
+  return(dep.data_custom)
+}
